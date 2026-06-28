@@ -89,16 +89,16 @@ export function DashboardHomeView({
   return (
     <div className="space-y-6">
       {/* Welcome status header */}
-      <div className="bg-[#FFF9E6] border-[3px] border-on-surface p-6 neubrutal-shadow-sm rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="bg-[#FFE5A3] border-[3px] border-on-surface p-6 neubrutal-shadow-sm rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-fade-in">
         <div>
           <div className="font-label-caps text-xs text-on-surface-variant font-bold uppercase tracking-wider mb-1">
             System Node: Active
           </div>
           <h2 className="font-display text-2xl md:text-3xl font-black text-on-surface">
-            Welcome, {displayName}
+            Welcome, {displayName || "Builder"}
           </h2>
           <p className="font-mono text-xs text-primary mt-1">
-            Public identity: {baseUrl}/{username} • Short link: km.to/{username}
+            Public identity: {baseUrl}/{username || "..."} • Short link: km.to/{username || "..."}
           </p>
         </div>
         <div className="flex gap-2">
@@ -117,18 +117,18 @@ export function DashboardHomeView({
         {/* Left column: checklist & suggestions */}
         <div className="lg:col-span-2 space-y-6">
           {/* PROFILE STRENGTH CHECKLIST */}
-          <div className="bg-white border-[3px] border-on-surface p-6 neubrutal-shadow-sm rounded-xl">
+          <div className="bg-[#F0FFF4] border-[3px] border-on-surface p-6 neubrutal-shadow-sm rounded-xl">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-headline-md text-lg font-black uppercase text-on-surface">
                 Profile strength: {completionPercentage}%
               </h3>
-              <span className="font-mono text-xs font-bold px-2 py-0.5 border-[2px] border-on-surface bg-secondary-container">
+              <span className="font-mono text-xs font-bold px-2 py-0.5 border-[2px] border-on-surface bg-white">
                 {completedCount}/{totalTasks} Checked
               </span>
             </div>
 
             {/* Progress bar */}
-            <div className="w-full bg-slate-100 h-4 border-[2px] border-on-surface rounded-full overflow-hidden mb-6">
+            <div className="w-full bg-white border-[2px] border-on-surface h-4 rounded-full overflow-hidden mb-6">
               <div
                 className="bg-primary h-full transition-all duration-500 ease-out"
                 style={{ width: `${completionPercentage}%` }}
@@ -150,7 +150,7 @@ export function DashboardHomeView({
               ].map((task) => (
                 <label
                   key={task.id}
-                  className="flex items-center gap-3 p-3 border-[2px] border-on-surface rounded-lg bg-surface-container-low hover:bg-slate-50 cursor-pointer select-none transition-colors"
+                  className="flex items-center gap-3 p-3 border-[2px] border-on-surface rounded-lg bg-white hover:bg-slate-50 cursor-pointer select-none transition-colors"
                 >
                   <input
                     type="checkbox"
@@ -167,7 +167,7 @@ export function DashboardHomeView({
           </div>
 
           {/* DYNAMIC SUGGESTED ACTION */}
-          <div className="bg-white border-[3px] border-on-surface p-6 neubrutal-shadow-sm rounded-xl">
+          <div className="bg-[#F0F9FF] border-[3px] border-on-surface p-6 neubrutal-shadow-sm rounded-xl">
             <h3 className="font-headline-md text-lg font-black uppercase text-on-surface mb-4">
               Suggested Next Action
             </h3>
@@ -196,7 +196,7 @@ export function DashboardHomeView({
                   </div>
                 ))}
               {suggestedActions.filter((action) => !action.completed).length === 0 && (
-                <div className="col-span-3 p-6 text-center border-[2px] border-dashed border-on-surface-variant/30 rounded-lg text-on-surface-variant font-bold text-sm">
+                <div className="col-span-3 p-6 text-center border-[2px] border-dashed border-on-surface-variant/30 rounded-lg text-on-surface-variant font-bold text-sm bg-white">
                   🎯 Perfect! All suggestion targets met.
                 </div>
               )}
@@ -207,19 +207,19 @@ export function DashboardHomeView({
         {/* Right column: activity feed & quick stats */}
         <div className="space-y-6">
           {/* RECENT ACTIVITY FEED */}
-          <div className="bg-white border-[3px] border-on-surface p-6 neubrutal-shadow-sm rounded-xl flex flex-col h-full">
+          <div className="bg-[#FAF5FF] border-[3px] border-on-surface p-6 neubrutal-shadow-sm rounded-xl flex flex-col h-full">
             <h3 className="font-headline-md text-lg font-black uppercase text-on-surface mb-4">
               Recent Activity Feed
             </h3>
             <div className="space-y-4 flex-1 max-h-[300px] overflow-y-auto pr-1">
               {activities.length === 0 ? (
-                <div className="p-4 text-center text-on-surface-variant/50 font-bold text-xs">
+                <div className="p-4 text-center text-on-surface-variant/50 font-bold text-xs bg-white border border-on-surface border-dashed rounded-lg">
                   No activity events registered yet.
                 </div>
               ) : (
                 activities.slice().reverse().map((act) => (
                   <div key={act.id} className="flex gap-3 items-start border-b border-on-surface/10 pb-3 last:border-b-0 last:pb-0">
-                    <div className="w-8 h-8 rounded-full border-[2px] border-on-surface bg-slate-100 flex items-center justify-center shrink-0">
+                    <div className="w-8 h-8 rounded-full border-[2px] border-on-surface bg-white flex items-center justify-center shrink-0">
                       <span className="material-symbols-outlined text-[16px] text-on-surface">
                         {act.type === "sync" ? "sync" : act.type === "success" ? "check" : "info"}
                       </span>
@@ -239,24 +239,24 @@ export function DashboardHomeView({
           </div>
 
           {/* QUICK STATS */}
-          <div className="bg-white border-[3px] border-on-surface p-6 neubrutal-shadow-sm rounded-xl">
+          <div className="bg-[#FFFBEB] border-[3px] border-on-surface p-6 neubrutal-shadow-sm rounded-xl">
             <h3 className="font-headline-md text-lg font-black uppercase text-on-surface mb-4">
               Real-Time Stats
             </h3>
             <div className="grid grid-cols-2 gap-4">
-              <div className="p-3 border-[2px] border-on-surface bg-surface-container-low rounded-lg">
+              <div className="p-3 border-[2px] border-on-surface bg-white rounded-lg">
                 <span className="font-label-caps text-[9px] text-on-surface-variant font-bold block uppercase">Profile Views</span>
                 <span className="font-mono text-xl font-bold">{viewsCount}</span>
               </div>
-              <div className="p-3 border-[2px] border-on-surface bg-surface-container-low rounded-lg">
+              <div className="p-3 border-[2px] border-on-surface bg-white rounded-lg">
                 <span className="font-label-caps text-[9px] text-on-surface-variant font-bold block uppercase">QR Scans</span>
                 <span className="font-mono text-xl font-bold">{scansCount}</span>
               </div>
-              <div className="p-3 border-[2px] border-on-surface bg-surface-container-low rounded-lg">
+              <div className="p-3 border-[2px] border-on-surface bg-white rounded-lg">
                 <span className="font-label-caps text-[9px] text-on-surface-variant font-bold block uppercase">Exports</span>
                 <span className="font-mono text-xl font-bold">{downloadsCount}</span>
               </div>
-              <div className="p-3 border-[2px] border-on-surface bg-surface-container-low rounded-lg">
+              <div className="p-3 border-[2px] border-on-surface bg-white rounded-lg">
                 <span className="font-label-caps text-[9px] text-on-surface-variant font-bold block uppercase">Proofs Sync</span>
                 <span className="font-mono text-xl font-bold">{projectsCount + certsCount + testimonialsCount}</span>
               </div>

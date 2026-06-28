@@ -283,9 +283,58 @@ export default function DashboardPage() {
     }
   };
 
-  const handleSkipOnboarding = () => {
-    setIsOnboarded(true);
-    triggerToast("Setup skipped.", "info");
+  const handleSkipOnboarding = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    let defaultName = "Builder";
+    let defaultUsername = `user-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        const u = JSON.parse(storedUser);
+        if (u.name) {
+          defaultName = u.name;
+          defaultUsername = u.name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-_]/g, "");
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    try {
+      setIsLoadingProfile(true);
+      const res = await fetch(`${backendUrl}/api/profile`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          username: defaultUsername,
+          displayName: defaultName,
+          profession: "developer",
+          themeMode: "modern",
+          bio: "Developer profile registered on Kaami.",
+          availability: "open-roles",
+          checkedTasks
+        })
+      });
+
+      if (res.ok) {
+        await logActivity("Account setup completed via quick skip", "success");
+        await fetchProfileData();
+        triggerToast("Welcome! Default profile registered.", "success");
+      } else {
+        setIsOnboarded(true); // fallback
+      }
+    } catch (e) {
+      console.error(e);
+      setIsOnboarded(true); // fallback
+    } finally {
+      setIsLoadingProfile(false);
+    }
   };
 
   const resetOnboarding = () => {
@@ -489,9 +538,9 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#FFF9E6] selection:bg-tertiary-fixed selection:text-on-tertiary-fixed font-sans text-on-surface">
+    <div className="min-h-screen h-screen flex flex-col bg-[#FFF9E6] selection:bg-tertiary-fixed selection:text-on-tertiary-fixed font-sans text-on-surface overflow-hidden">
       {/* NAVBAR */}
-      <nav className="sticky top-0 z-40 bg-surface border-b-[3px] border-on-surface flex justify-between items-center w-full px-container-margin py-3.5">
+      <nav className="sticky top-0 z-40 bg-surface border-b-[3px] border-on-surface flex justify-between items-center w-full px-container-margin py-3.5 h-[70px] shrink-0">
         <div className="flex items-center gap-4">
           <button
             onClick={() => setIsMobileSidebarOpen(true)}
@@ -563,7 +612,7 @@ export default function DashboardPage() {
               }}
               className="w-10 h-10 border-[2px] border-on-surface rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-bold text-sm uppercase cursor-pointer"
             >
-              {displayName.charAt(0)}
+              {displayName ? displayName.charAt(0) : "U"}
             </button>
             {isProfileMenuOpen && (
               <div className="absolute right-0 mt-2 w-56 bg-white border-[3px] border-on-surface rounded-xl neubrutal-shadow-sm p-2 z-50 animate-scale-up">
@@ -604,8 +653,8 @@ export default function DashboardPage() {
       </nav>
 
       {/* GRID BODY */}
-      <div className="flex-1 flex relative">
-        <aside className={`hidden md:block bg-surface border-r-[3px] border-on-surface p-4 transition-all duration-300 ${isSidebarCollapsed ? "w-20" : "w-64"}`}>
+      <div className="flex-1 flex overflow-hidden">
+        <aside className={`hidden md:block bg-surface border-r-[3px] border-on-surface p-4 transition-all duration-300 h-full overflow-y-auto shrink-0 ${isSidebarCollapsed ? "w-20" : "w-64"}`}>
           <div className="space-y-1">
             {sidebarItems.map((item) => (
               <button
@@ -659,7 +708,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        <main className="flex-1 p-6 md:p-8 max-w-full overflow-x-hidden relative">
+        <main className="flex-1 p-6 md:p-8 overflow-y-auto h-full relative">
           {globalState === "loading" && (
             <div className="space-y-6 animate-pulse select-none pointer-events-none">
               <div className="h-24 bg-white border-[3px] border-on-surface rounded-xl"></div>
@@ -840,26 +889,6 @@ export default function DashboardPage() {
         </main>
       </div>
 
-      <div className="fixed bottom-6 left-6 z-[60]">
-        <div className="bg-white border-[3px] border-on-surface p-3 neubrutal-shadow-sm rounded-xl flex items-center gap-2 select-none">
-          <span className="material-symbols-outlined text-[16px] text-primary font-bold">tune</span>
-          <span className="font-label-caps text-[10px] font-black uppercase text-on-surface-variant mr-1">OS Viewports:</span>
-          {["success", "loading", "empty", "error"].map((st) => (
-            <button
-              key={st}
-              onClick={() => {
-                setGlobalState(st as any);
-                triggerToast(`Switched view state to: ${st}`, "info");
-              }}
-              className={`px-2 py-0.5 border border-on-surface rounded text-[9px] font-bold uppercase cursor-pointer ${
-                globalState === st ? "bg-primary-container text-on-primary-container" : "bg-white hover:bg-slate-50"
-              }`}
-            >
-              {st}
-            </button>
-          ))}
-        </div>
-      </div>
 
       <NeubrutalModal isOpen={isTrustModalOpen} onClose={() => setIsTrustModalOpen(false)} title="Trust Index breakdown">
         <div className="space-y-4 pt-2">

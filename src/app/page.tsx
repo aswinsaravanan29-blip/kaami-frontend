@@ -190,14 +190,15 @@ export default function Home() {
 
           <div className="relative">
             {/* Decorative Hand-drawn Elements */}
-            <div className="absolute -top-[90px] -right-[30px] hidden lg:block floating-arrow select-none pointer-events-none z-10">
-              <svg
-                fill="none"
-                height="130"
-                viewBox="-20 0 145 130"
-                width="145"
-                xmlns="http://www.w3.org/2000/svg"
-              >
+            {!isLoggedIn && (
+              <div className="absolute -top-[90px] -right-[30px] hidden lg:block floating-arrow select-none pointer-events-none z-10">
+                <svg
+                  fill="none"
+                  height="130"
+                  viewBox="-20 0 145 130"
+                  width="145"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
                 <path
                   d="M10 110C30 90 40 40 100 20M100 20L80 15M100 20L105 40"
                   stroke="#AB3500"
@@ -216,6 +217,7 @@ export default function Home() {
                 </text> */}
               </svg>
             </div>
+            )}
             {/* Featured Bento Demo Card */}
             <div className="bg-surface-container-lowest border-[3px] border-on-surface p-8 neubrutal-shadow rounded-xl">
               <div className="flex items-center justify-between mb-8">

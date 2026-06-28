@@ -42,8 +42,8 @@ export default function LoginPage() {
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
 
-      // Redirect to home
-      router.push("/");
+      // Redirect to dashboard
+      router.push("/dashboard");
       router.refresh();
     } catch (err: any) {
       setError(err.message || "Something went wrong. Please try again.");

@@ -45,13 +45,13 @@ export default function Home() {
               <>
                 <Link
                   className="font-label-caps text-label-caps text-primary font-bold border-b-2 border-primary pb-1"
-                  href="#"
+                  href="/dashboard"
                 >
                   Dashboard
                 </Link>
                 <Link
                   className="font-label-caps text-label-caps text-on-surface-variant font-medium hover:text-primary transition-colors"
-                  href="#"
+                  href="/dashboard"
                 >
                   Verifications
                 </Link>
@@ -153,7 +153,7 @@ export default function Home() {
             </p>
             <div className="flex flex-col sm:flex-row gap-6">
               {isLoggedIn ? (
-                <Link href="#" className="w-full sm:w-auto">
+                <Link href="/dashboard" className="w-full sm:w-auto">
                   <NeubrutalButton
                     className="w-full px-8 py-4 bg-primary-container text-on-primary-container font-headline-md text-headline-md text-center"
                     shadowSize="md"

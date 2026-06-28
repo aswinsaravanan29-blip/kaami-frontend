@@ -186,7 +186,7 @@ export default function RegisterPage() {
           <div className="bg-white border-[3px] border-on-surface p-8 neubrutal-shadow rounded-xl flex flex-col items-center gap-6 max-w-xs text-center">
             <span className="material-symbols-outlined text-[64px] animate-spin text-primary font-bold">sync</span>
             <div>
-              <h3 className="font-display text-xl font-black uppercase text-on-surface">Kaami OS</h3>
+              <h3 className="font-display text-xl font-black uppercase text-on-surface">Kaami</h3>
               <p className="font-mono text-xs text-on-surface-variant mt-2 font-bold">{authTransition}</p>
             </div>
           </div>

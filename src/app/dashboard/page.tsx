@@ -275,7 +275,7 @@ export default function DashboardPage() {
           displayName: data.displayName,
           profession: data.profession,
           themeMode: data.theme,
-          bio: "Developer profile claimed on Kaami OS.",
+          bio: "Developer profile claimed on Kaami.",
           availability: "open-roles",
           checkedTasks
         })
@@ -743,7 +743,7 @@ export default function DashboardPage() {
             </span>
           </button>
           <span className="font-display text-[22px] font-black italic tracking-tighter text-on-surface uppercase select-none">
-            Kaami OS
+            Kaami
           </span>
         </div>
 
@@ -846,13 +846,11 @@ export default function DashboardPage() {
               <button
                 key={item.id}
                 onClick={() => setActiveView(item.id)}
-                className={`w-full flex items-center border-[2px] rounded-lg transition-all cursor-pointer ${
-                  isSidebarCollapsed ? "justify-center p-3" : "gap-3 p-3"
-                } ${
-                  activeView === item.id
+                className={`w-full flex items-center border-[2px] rounded-lg transition-all cursor-pointer ${isSidebarCollapsed ? "justify-center p-3" : "gap-3 p-3"
+                  } ${activeView === item.id
                     ? "bg-on-surface text-white border-on-surface"
                     : "border-transparent hover:bg-white hover:border-on-surface"
-                }`}
+                  }`}
               >
                 <span className="material-symbols-outlined shrink-0 text-[20px]">{item.icon}</span>
                 {!isSidebarCollapsed && (
@@ -881,11 +879,10 @@ export default function DashboardPage() {
                       setActiveView(item.id);
                       setIsMobileSidebarOpen(false);
                     }}
-                    className={`w-full flex items-center gap-3 p-3 border-[2px] rounded-lg cursor-pointer ${
-                      activeView === item.id
-                        ? "bg-on-surface text-white border-on-surface"
-                        : "border-transparent hover:bg-white"
-                    }`}
+                    className={`w-full flex items-center gap-3 p-3 border-[2px] rounded-lg cursor-pointer ${activeView === item.id
+                      ? "bg-on-surface text-white border-on-surface"
+                      : "border-transparent hover:bg-white"
+                      }`}
                   >
                     <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
                     <span className="font-label-caps text-xs font-bold">{item.label}</span>
@@ -968,6 +965,8 @@ export default function DashboardPage() {
                   addActivity={logActivity}
                   baseUrl={baseUrl}
                   projectsCount={projects.length}
+                  checkedTasks={checkedTasks}
+                  saveCheckedTasks={saveProfileCheckedTasks}
                 />
               )}
               {activeView === "projects" && (
@@ -1178,9 +1177,8 @@ export default function DashboardPage() {
             />
             <label
               htmlFor="avatar-file-upload"
-              className={`w-full flex items-center justify-center p-4 border-[2px] border-dashed border-on-surface rounded-lg bg-surface-container-low cursor-pointer hover:bg-slate-50 transition-colors gap-2 ${
-                isUploadingPhoto ? "opacity-50 pointer-events-none" : ""
-              }`}
+              className={`w-full flex items-center justify-center p-4 border-[2px] border-dashed border-on-surface rounded-lg bg-surface-container-low cursor-pointer hover:bg-slate-50 transition-colors gap-2 ${isUploadingPhoto ? "opacity-50 pointer-events-none" : ""
+                }`}
             >
               <span className="material-symbols-outlined text-primary text-[24px]">upload_file</span>
               <span className="text-xs font-bold text-on-surface">
@@ -1308,9 +1306,8 @@ export default function DashboardPage() {
             />
             <label
               htmlFor="resume-file-upload"
-              className={`w-full flex flex-col items-center justify-center p-6 border-[2px] border-dashed border-on-surface rounded-lg bg-surface-container-low cursor-pointer hover:bg-slate-50 transition-colors gap-2 ${
-                isUploadingResume ? "opacity-50 pointer-events-none" : ""
-              }`}
+              className={`w-full flex flex-col items-center justify-center p-6 border-[2px] border-dashed border-on-surface rounded-lg bg-surface-container-low cursor-pointer hover:bg-slate-50 transition-colors gap-2 ${isUploadingResume ? "opacity-50 pointer-events-none" : ""
+                }`}
             >
               <span className="material-symbols-outlined text-primary text-[32px]">upload_file</span>
               <span className="text-xs font-bold text-on-surface">
@@ -1361,7 +1358,7 @@ export default function DashboardPage() {
           <div className="bg-white border-[3px] border-on-surface p-8 neubrutal-shadow rounded-xl flex flex-col items-center gap-6 max-w-xs text-center">
             <span className="material-symbols-outlined text-[64px] animate-spin text-primary font-bold">sync</span>
             <div>
-              <h3 className="font-display text-xl font-black uppercase text-on-surface">Kaami OS</h3>
+              <h3 className="font-display text-xl font-black uppercase text-on-surface">Kaami</h3>
               <p className="font-mono text-xs text-on-surface-variant mt-2 font-bold">{authTransition}</p>
             </div>
           </div>

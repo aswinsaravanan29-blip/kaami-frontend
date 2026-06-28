@@ -137,6 +137,30 @@ export default function PublicProfilePage({ params }: ProfilePageProps) {
   const { profile, projects, certificates, testimonials } = data;
   const theme = profile.themeMode || "modern";
 
+  // Trust score calculation
+  const githubSyncPoints = profile.checkedTasks?.["connect-github"] ? 20 : 0;
+  const linkedinSyncPoints = profile.checkedTasks?.["connect-linkedin"] ? 20 : 0;
+  const projectsPoints = Math.min(projects.length * 10, 20);
+  const certsPoints = Math.min(certificates.length * 15, 30);
+  const testimonialsPoints = Math.min(testimonials.length * 10, 20);
+  const trustScore = githubSyncPoints + linkedinSyncPoints + projectsPoints + certsPoints + testimonialsPoints;
+
+  // Dynamic skills extraction from projects and certificates tech stack
+  const verifiedSkills = Array.from(
+    new Set([
+      ...projects.flatMap((p: any) => p.tech || []),
+      ...(certificates.flatMap((c: any) => {
+        if (!c.tech_stack) return [];
+        if (Array.isArray(c.tech_stack)) return c.tech_stack;
+        try {
+          return JSON.parse(c.tech_stack);
+        } catch {
+          return c.tech_stack.split(",").map((s: string) => s.trim());
+        }
+      }))
+    ])
+  ).filter(Boolean).slice(0, 12);
+
   // Dynamic Theme Colors
   let bgClass = "bg-[#FFF9E6]";
   let containerBg = "bg-white";
@@ -184,23 +208,58 @@ export default function PublicProfilePage({ params }: ProfilePageProps) {
                   <span className="material-symbols-outlined text-[10px] font-bold">verified</span>
                   Verified
                 </span>
-                {profile.checkedTasks?.linkedinUrl && (
-                  <a
-                    href={profile.checkedTasks.linkedinUrl.startsWith("http") ? profile.checkedTasks.linkedinUrl : `https://${profile.checkedTasks.linkedinUrl}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-[#0077B5] text-white border border-on-surface rounded text-[9px] font-bold uppercase select-none hover:opacity-90 transition-opacity"
-                  >
-                    <span className="font-sans font-black">in</span>
-                    LinkedIn
-                  </a>
-                )}
               </div>
               <p className="font-mono text-xs mt-1.5" style={{ color: theme === "corporate" ? "#38bdf8" : "#ab3500" }}>
                 {baseUrl}/{profile.username}
               </p>
               <div className="font-label-caps text-[10px] font-black uppercase text-on-surface-variant mt-1.5">
                 {profile.profession.toUpperCase()}
+              </div>
+
+              {/* Verified Handles & Contacts (GitHub, LinkedIn, Website, Email) */}
+              <div className="flex flex-wrap gap-x-4 gap-y-2 mt-3.5 text-[11px] font-mono text-on-surface-variant/80">
+                {profile.email && (
+                  <a
+                    href={`mailto:${profile.email}`}
+                    className="inline-flex items-center gap-1 hover:text-primary transition-colors hover:underline"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">mail</span>
+                    {profile.email}
+                  </a>
+                )}
+                {profile.checkedTasks?.websiteUrl && (
+                  <a
+                    href={profile.checkedTasks.websiteUrl.startsWith("http") ? profile.checkedTasks.websiteUrl : `https://${profile.checkedTasks.websiteUrl}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 hover:text-primary transition-colors hover:underline font-bold"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">language</span>
+                    Website
+                  </a>
+                )}
+                {profile.checkedTasks?.githubUsername && (
+                  <a
+                    href={`https://github.com/${profile.checkedTasks.githubUsername}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 hover:text-primary transition-colors hover:underline"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">terminal</span>
+                    @{profile.checkedTasks.githubUsername}
+                  </a>
+                )}
+                {profile.checkedTasks?.linkedinUrl && (
+                  <a
+                    href={profile.checkedTasks.linkedinUrl.startsWith("http") ? profile.checkedTasks.linkedinUrl : `https://${profile.checkedTasks.linkedinUrl}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 hover:text-primary transition-colors hover:underline"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">account_box</span>
+                    LinkedIn
+                  </a>
+                )}
               </div>
             </div>
           </div>
@@ -223,12 +282,77 @@ export default function PublicProfilePage({ params }: ProfilePageProps) {
           </div>
         </div>
 
-        {/* BIO SUMMARY */}
-        <div className={`${containerBg} border-[3px] ${borderClass} p-6 md:p-8 neubrutal-shadow rounded-xl space-y-4`}>
-          <h3 className="font-headline-md text-lg font-black uppercase">Professional Statement</h3>
-          <p className="font-body-md text-sm md:text-base leading-relaxed opacity-90">
-            {profile.bio || "No professional statement logged on this ledger node."}
-          </p>
+        {/* ABOUT & TRUST LEDGER OVERVIEW (BENTO GRID) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Bio & Skills card */}
+          <div className={`${containerBg} border-[3px] ${borderClass} p-6 md:p-8 neubrutal-shadow rounded-xl space-y-6 md:col-span-2 flex flex-col justify-between`}>
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 border-b-2 border-on-surface/5 pb-2">
+                <span className="material-symbols-outlined text-[20px] text-primary">person_search</span>
+                <h3 className="font-headline-md text-base font-black uppercase">Professional Statement</h3>
+              </div>
+              <p className="font-body-md text-sm leading-relaxed opacity-95">
+                {profile.bio || "No professional statement logged on this ledger node."}
+              </p>
+            </div>
+
+            {/* Verified Skills tags */}
+            <div className="space-y-3 pt-4 border-t border-on-surface/5 mt-4">
+              <div className="flex items-center gap-1.5 text-on-surface-variant/80 font-bold font-mono text-[10px] uppercase">
+                <span className="material-symbols-outlined text-[14px]">local_activity</span>
+                Verified Skills
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {verifiedSkills.length > 0 ? (
+                  verifiedSkills.map((sk: string) => (
+                    <span key={sk} className="px-2 py-0.5 bg-slate-100 border border-on-surface rounded text-[9.5px] font-mono font-bold text-on-surface-variant flex items-center gap-1 select-none">
+                      <span className="w-1 h-1 rounded-full bg-secondary"></span>
+                      {sk}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-xs text-on-surface-variant/50 font-mono">No verified skills logged.</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Facts Card */}
+          <div className={`${containerBg} border-[3px] ${borderClass} p-6 neubrutal-shadow rounded-xl space-y-4 flex flex-col justify-between`}>
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 border-b-2 border-on-surface/5 pb-2">
+                <span className="material-symbols-outlined text-[20px] text-primary">assessment</span>
+                <h3 className="font-headline-md text-base font-black uppercase">Quick Ledger Stats</h3>
+              </div>
+
+              <div className="space-y-3 font-mono text-xs">
+                <div className="flex justify-between items-center pb-2 border-b border-on-surface/5">
+                  <span className="opacity-70">Trust Index Score:</span>
+                  <span className="font-bold text-secondary">{trustScore}/100</span>
+                </div>
+                <div className="flex justify-between items-center pb-2 border-b border-on-surface/5">
+                  <span className="opacity-70">Synced Projects:</span>
+                  <span className="font-bold">{projects.length} Nodes</span>
+                </div>
+                <div className="flex justify-between items-center pb-2 border-b border-on-surface/5">
+                  <span className="opacity-70">Verified Credentials:</span>
+                  <span className="font-bold">{certificates.length} Certs</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="opacity-70">Peer Endorsements:</span>
+                  <span className="font-bold">{testimonials.length} Recs</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-on-surface/5">
+              <div className="p-3 bg-secondary-container border-[2px] border-on-surface text-center rounded">
+                <span className="font-mono text-[10px] font-black uppercase text-on-secondary-container">
+                  ✓ Ledger Verified Score
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* GITHUB CONTRIBUTION HEATMAP */}
@@ -362,36 +486,41 @@ export default function PublicProfilePage({ params }: ProfilePageProps) {
               <h3 className="font-headline-md text-lg font-black uppercase border-b-2 border-on-surface pb-1">
                 Verified Work Experience
               </h3>
-              <div className="relative border-l-[3px] border-on-surface ml-4 pl-8 space-y-6 py-4">
-                {data.experiences.map((exp: any, i: number) => (
-                  <div key={i} className="relative">
-                    <div className="absolute -left-[45px] top-1.5 w-7 h-7 rounded-full border-[2px] border-on-surface bg-white flex items-center justify-center">
-                      <span className="material-symbols-outlined text-[14px]">badge</span>
-                    </div>
-
-                    <div className={`${containerBg} border-[3px] ${borderClass} p-5 neubrutal-shadow-sm rounded-xl space-y-2`}>
-                      <div className="flex justify-between items-start gap-2">
-                        <div>
-                          <h4 className="font-headline-md text-sm font-black">{exp.role}</h4>
-                          <span className="text-[11px] text-on-surface-variant font-bold">{exp.company} • {exp.time_period}</span>
-                        </div>
-                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-secondary-container text-on-secondary-container border border-on-surface rounded text-[8px] font-bold uppercase select-none">
-                          Verified
-                        </span>
+              <div className="relative">
+                <div className="max-h-[420px] overflow-y-auto pr-3 scrollbar-none space-y-6 border-l-[3px] border-on-surface ml-4 pl-8 py-2">
+                  {data.experiences.map((exp: any, i: number) => (
+                    <div key={i} className="relative">
+                      <div className="absolute -left-[45px] top-1.5 w-7 h-7 rounded-full border-[2px] border-on-surface bg-white flex items-center justify-center">
+                        <span className="material-symbols-outlined text-[14px]">badge</span>
                       </div>
-                      {exp.description && <p className="text-xs text-on-surface-variant leading-relaxed">{exp.description}</p>}
-                      {exp.evidence && exp.evidence.length > 0 && (
-                        <div className="flex flex-wrap gap-2 pt-2 border-t border-on-surface/5 mt-2">
-                          {exp.evidence.map((ev: string, idx: number) => (
-                            <span key={idx} className="px-2 py-0.5 bg-slate-100 border border-on-surface rounded text-[9.5px] font-mono font-bold text-on-surface-variant/80">
-                              ✓ {ev}
-                            </span>
-                          ))}
+
+                      <div className={`${containerBg} border-[3px] ${borderClass} p-5 neubrutal-shadow-sm rounded-xl space-y-2`}>
+                        <div className="flex justify-between items-start gap-2">
+                          <div>
+                            <h4 className="font-headline-md text-sm font-black">{exp.role}</h4>
+                            <span className="text-[11px] text-on-surface-variant font-bold">{exp.company} • {exp.time_period}</span>
+                          </div>
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-secondary-container text-on-secondary-container border border-on-surface rounded text-[8px] font-bold uppercase select-none">
+                            Verified
+                          </span>
                         </div>
-                      )}
+                        {exp.description && <p className="text-xs text-on-surface-variant leading-relaxed">{exp.description}</p>}
+                        {exp.evidence && exp.evidence.length > 0 && (
+                          <div className="flex flex-wrap gap-2 pt-2 border-t border-on-surface/5 mt-2">
+                            {exp.evidence.map((ev: string, idx: number) => (
+                              <span key={idx} className="px-2 py-0.5 bg-slate-100 border border-on-surface rounded text-[9.5px] font-mono font-bold text-on-surface-variant/80">
+                                ✓ {ev}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
+                {data.experiences.length > 2 && (
+                  <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-background/90 via-background/20 to-transparent pointer-events-none z-10"></div>
+                )}
               </div>
             </div>
           )}

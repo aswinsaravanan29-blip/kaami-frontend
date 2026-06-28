@@ -297,6 +297,8 @@ interface ProfileBuilderProps {
   addActivity: (txt: string, type: string) => void;
   baseUrl: string;
   projectsCount: number;
+  checkedTasks: Record<string, any>;
+  saveCheckedTasks: (tasks: Record<string, any>) => Promise<void>;
 }
 
 export function ProfileBuilderView({
@@ -309,18 +311,22 @@ export function ProfileBuilderView({
   triggerToast,
   addActivity,
   baseUrl,
-  projectsCount
+  projectsCount,
+  checkedTasks,
+  saveCheckedTasks
 }: ProfileBuilderProps) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [drawerSection, setDrawerSection] = useState("");
   const [tempBio, setTempBio] = useState(bio);
   const [tempAvailability, setTempAvailability] = useState(availability);
+  const [tempWebsite, setTempWebsite] = useState(checkedTasks.websiteUrl || "");
 
   const handleSave = () => {
     if (drawerSection === "Basic Info") {
       setBio(tempBio);
-      addActivity(`Profile bio updated`, "info");
-      triggerToast("Bio updated successfully.", "success");
+      saveCheckedTasks({ ...checkedTasks, websiteUrl: tempWebsite });
+      addActivity(`Profile details updated`, "info");
+      triggerToast("Bio and website link updated successfully.", "success");
     } else if (drawerSection === "Availability") {
       setAvailability(tempAvailability);
       addActivity(`Availability status set to ${tempAvailability.replace("-", " ")}`, "info");
@@ -331,7 +337,10 @@ export function ProfileBuilderView({
 
   const openEdit = (section: string) => {
     setDrawerSection(section);
-    if (section === "Basic Info") setTempBio(bio);
+    if (section === "Basic Info") {
+      setTempBio(bio);
+      setTempWebsite(checkedTasks.websiteUrl || "");
+    }
     if (section === "Availability") setTempAvailability(availability);
     setIsDrawerOpen(true);
   };
@@ -358,7 +367,7 @@ export function ProfileBuilderView({
             <div className="flex justify-between items-start">
               <h3 className="font-headline-md text-lg font-black uppercase text-on-surface">Basic Information</h3>
               <button onClick={() => openEdit("Basic Info")} className="text-primary hover:underline font-bold text-xs cursor-pointer">
-                Edit Bio
+                Edit Bio & Links
               </button>
             </div>
             <div className="grid grid-cols-2 gap-4 text-sm">
@@ -369,6 +378,12 @@ export function ProfileBuilderView({
               <div>
                 <span className="text-on-surface-variant/60 font-bold block uppercase text-[10px] tracking-wider">URL Slug</span>
                 <span className="font-bold">/{username}</span>
+              </div>
+              <div className="col-span-2">
+                <span className="text-on-surface-variant/60 font-bold block uppercase text-[10px] tracking-wider">Website Link</span>
+                <span className="font-bold text-primary block truncate font-mono mt-0.5">
+                  {checkedTasks.websiteUrl || "No custom website linked yet."}
+                </span>
               </div>
               <div className="col-span-2">
                 <span className="text-on-surface-variant/60 font-bold block uppercase text-[10px] tracking-wider">Bio Statement</span>
@@ -437,14 +452,26 @@ export function ProfileBuilderView({
       <NeubrutalDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} title={`Edit: ${drawerSection}`}>
         <div className="space-y-4 pt-4">
           {drawerSection === "Basic Info" && (
-            <div>
-              <label className="block font-label-caps text-[10px] font-bold uppercase mb-1">Bio Summary</label>
-              <textarea
-                value={tempBio}
-                onChange={(e) => setTempBio(e.target.value)}
-                rows={5}
-                className="w-full border-[2px] border-on-surface p-2 bg-white rounded-md font-body-md focus:outline-none"
-              />
+            <div className="space-y-4">
+              <div>
+                <label className="block font-label-caps text-[10px] font-bold uppercase mb-1">Bio Summary</label>
+                <textarea
+                  value={tempBio}
+                  onChange={(e) => setTempBio(e.target.value)}
+                  rows={5}
+                  className="w-full border-[2px] border-on-surface p-2 bg-white rounded-md font-body-md focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block font-label-caps text-[10px] font-bold uppercase mb-1">Personal / Company Website URL</label>
+                <input
+                  type="text"
+                  value={tempWebsite}
+                  onChange={(e) => setTempWebsite(e.target.value)}
+                  placeholder="e.g. portfolio.mybrand.io"
+                  className="w-full border-[2px] border-on-surface p-2 bg-white rounded-md font-body-md focus:outline-none text-xs"
+                />
+              </div>
             </div>
           )}
 

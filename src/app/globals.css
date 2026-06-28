@@ -116,3 +116,12 @@
     transform: translateY(-10px) rotate(-5deg);
   }
 }
+
+/* Hide scrollbars but keep scrolling functionality */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}

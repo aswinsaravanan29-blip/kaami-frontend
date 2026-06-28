@@ -66,8 +66,17 @@ export default function DashboardPage() {
   const [isTrustModalOpen, setIsTrustModalOpen] = useState(false);
   const [syncStatus, setSyncStatus] = useState<"synced" | "syncing" | "error">("synced");
   const [authTransition, setAuthTransition] = useState<string | null>(null);
+  const [experiences, setExperiences] = useState<any[]>([]);
 
-  const [checkedTasks, setCheckedTasks] = useState<Record<string, boolean>>({
+  // Task checklist modal states
+  const [activeTaskModal, setActiveTaskModal] = useState<string | null>(null);
+  const [photoUrlInput, setPhotoUrlInput] = useState("");
+  const [githubUsernameInput, setGithubUsernameInput] = useState("");
+  const [linkedinUrlInput, setLinkedinUrlInput] = useState("");
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [isUploadingResume, setIsUploadingResume] = useState(false);
+
+  const [checkedTasks, setCheckedTasks] = useState<Record<string, any>>({
     "add-photo": false,
     "connect-github": false,
     "connect-linkedin": false,
@@ -126,6 +135,7 @@ export default function DashboardPage() {
       setTestimonials(data.testimonials || []);
       setInboxItems(data.inboxItems || []);
       setActivities(data.activities || []);
+      setExperiences(data.experiences || []);
 
     } catch (e) {
       console.error(e);
@@ -171,7 +181,7 @@ export default function DashboardPage() {
     }
   }, [projects, certificates, testimonials, isOnboarded]);
 
-  const saveProfileCheckedTasks = async (tasks: Record<string, boolean>) => {
+  const saveProfileCheckedTasks = async (tasks: Record<string, any>) => {
     const token = localStorage.getItem("token");
     if (!token) return;
 
@@ -402,12 +412,187 @@ export default function DashboardPage() {
     }
   };
 
+  const handleSavePhoto = async (url: string) => {
+    const nextTasks = { ...checkedTasks, "add-photo": true, avatarUrl: url };
+    setCheckedTasks(nextTasks);
+    await saveProfileCheckedTasks(nextTasks);
+    await logActivity("Uploaded profile photo", "info");
+    triggerToast("Profile photo updated successfully!", "success");
+    setActiveTaskModal(null);
+    await fetchProfileData();
+  };
+
+  const handleUploadPhotoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    setIsUploadingPhoto(true);
+    triggerToast("Uploading avatar photo...", "info");
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch(`${backendUrl}/api/upload`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      if (!res.ok) throw new Error("Upload failed");
+
+      const data = await res.json();
+      await handleSavePhoto(data.secure_url);
+    } catch (err) {
+      console.error(err);
+      triggerToast("Failed to upload photo file.", "error");
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
+
+  const handleSaveGitHub = async () => {
+    if (!githubUsernameInput) {
+      triggerToast("Please enter a GitHub handle or URL.", "error");
+      return;
+    }
+
+    let cleanUsername = githubUsernameInput.trim();
+    if (cleanUsername.includes("github.com/")) {
+      cleanUsername = cleanUsername.split("github.com/").pop()?.split("/")[0] || cleanUsername;
+    }
+
+    const nextTasks = { ...checkedTasks, "connect-github": true, githubUsername: cleanUsername };
+    setCheckedTasks(nextTasks);
+    await saveProfileCheckedTasks(nextTasks);
+    await logActivity(`Connected GitHub sync for @${cleanUsername}`, "success");
+    triggerToast("GitHub handle linked successfully!", "success");
+    setActiveTaskModal(null);
+    await fetchProfileData();
+  };
+
+  const handleDisconnectGitHub = async () => {
+    const nextTasks = { ...checkedTasks, "connect-github": false, githubUsername: "" };
+    setCheckedTasks(nextTasks);
+    await saveProfileCheckedTasks(nextTasks);
+    await logActivity("Disconnected GitHub sync", "info");
+    triggerToast("GitHub handle unlinked.", "info");
+    setActiveTaskModal(null);
+    await fetchProfileData();
+  };
+
+  const handleSaveLinkedIn = async () => {
+    if (!linkedinUrlInput) {
+      triggerToast("Please enter a LinkedIn profile URL.", "error");
+      return;
+    }
+
+    const nextTasks = { ...checkedTasks, "connect-linkedin": true, linkedinUrl: linkedinUrlInput.trim() };
+    setCheckedTasks(nextTasks);
+    await saveProfileCheckedTasks(nextTasks);
+    await logActivity("Connected LinkedIn profile integrations", "success");
+    triggerToast("LinkedIn profile linked successfully!", "success");
+    setActiveTaskModal(null);
+    await fetchProfileData();
+  };
+
+  const handleDisconnectLinkedIn = async () => {
+    const nextTasks = { ...checkedTasks, "connect-linkedin": false, linkedinUrl: "" };
+    setCheckedTasks(nextTasks);
+    await saveProfileCheckedTasks(nextTasks);
+    await logActivity("Disconnected LinkedIn integrations", "info");
+    triggerToast("LinkedIn profile unlinked.", "info");
+    setActiveTaskModal(null);
+    await fetchProfileData();
+  };
+
+  const handleUploadResumeFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    setIsUploadingResume(true);
+    triggerToast("Uploading resume PDF document...", "info");
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch(`${backendUrl}/api/upload`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      if (!res.ok) throw new Error("Upload failed");
+
+      const data = await res.json();
+      const nextTasks = { ...checkedTasks, "upload-resume": true, resumeUrl: data.secure_url };
+      setCheckedTasks(nextTasks);
+      await saveProfileCheckedTasks(nextTasks);
+      await logActivity("Uploaded professional resume PDF", "success");
+      triggerToast("Resume uploaded successfully!", "success");
+      setActiveTaskModal(null);
+      await fetchProfileData();
+    } catch (err) {
+      console.error(err);
+      triggerToast("Failed to upload resume file.", "error");
+    } finally {
+      setIsUploadingResume(false);
+    }
+  };
+
+  const handleDisconnectResume = async () => {
+    const nextTasks = { ...checkedTasks, "upload-resume": false, resumeUrl: "" };
+    setCheckedTasks(nextTasks);
+    await saveProfileCheckedTasks(nextTasks);
+    await logActivity("Removed resume proof", "info");
+    triggerToast("Resume attachment removed.", "info");
+    setActiveTaskModal(null);
+    await fetchProfileData();
+  };
+
   const toggleTask = async (taskId: string) => {
-    if (["add-project", "add-certificate", "share-profile"].includes(taskId)) {
-      if (taskId === "add-project") setActiveView("projects");
-      if (taskId === "add-certificate") setActiveView("certificates");
-      if (taskId === "share-profile") setActiveView("testimonials");
-      triggerToast("Complete corresponding view forms to check this task.", "info");
+    if (taskId === "add-photo" || taskId === "connect-github" || taskId === "connect-linkedin" || taskId === "upload-resume") {
+      setPhotoUrlInput(checkedTasks.avatarUrl || "");
+      setGithubUsernameInput(checkedTasks.githubUsername || "");
+      setLinkedinUrlInput(checkedTasks.linkedinUrl || "");
+      setActiveTaskModal(taskId);
+      return;
+    }
+
+    if (taskId === "add-project") {
+      setActiveView("projects");
+      triggerToast("Navigate to Projects to publish a project proof.", "info");
+      return;
+    }
+    if (taskId === "add-certificate") {
+      setActiveView("certificates");
+      triggerToast("Navigate to Certificates to link a credential proof.", "info");
+      return;
+    }
+    if (taskId === "add-experience") {
+      setActiveView("proofs");
+      triggerToast("Navigate to Proofs to add a work experience node.", "info");
+      return;
+    }
+    if (taskId === "publish-profile") {
+      setActiveView("public-profile");
+      triggerToast("Navigate to Public Profile to view and publish.", "info");
+      return;
+    }
+    if (taskId === "share-profile") {
+      setActiveView("share-center");
+      triggerToast("Navigate to Share Center to view sharing options.", "info");
       return;
     }
 
@@ -655,13 +840,15 @@ export default function DashboardPage() {
 
       {/* GRID BODY */}
       <div className="flex-1 flex overflow-hidden">
-        <aside className={`hidden md:block bg-surface border-r-[3px] border-on-surface p-4 transition-all duration-300 h-full overflow-y-auto shrink-0 ${isSidebarCollapsed ? "w-20" : "w-64"}`}>
+        <aside className={`hidden md:block bg-surface border-r-[3px] border-on-surface transition-all duration-300 h-full overflow-y-auto shrink-0 scrollbar-none ${isSidebarCollapsed ? "w-20 p-3" : "w-64 p-4"}`}>
           <div className="space-y-1">
             {sidebarItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => setActiveView(item.id)}
-                className={`w-full flex items-center gap-3 p-3 border-[2px] rounded-lg transition-all cursor-pointer ${
+                className={`w-full flex items-center border-[2px] rounded-lg transition-all cursor-pointer ${
+                  isSidebarCollapsed ? "justify-center p-3" : "gap-3 p-3"
+                } ${
                   activeView === item.id
                     ? "bg-on-surface text-white border-on-surface"
                     : "border-transparent hover:bg-white hover:border-on-surface"
@@ -792,6 +979,7 @@ export default function DashboardPage() {
                   triggerTask={triggerTask}
                   baseUrl={baseUrl}
                   username={username}
+                  fetchProfileData={fetchProfileData}
                 />
               )}
               {activeView === "proofs" && (
@@ -803,6 +991,11 @@ export default function DashboardPage() {
                   certificates={certificates}
                   testimonials={testimonials}
                   baseUrl={baseUrl}
+                  experiences={experiences}
+                  fetchProfileData={fetchProfileData}
+                  triggerToast={triggerToast}
+                  addActivity={logActivity}
+                  triggerTask={triggerTask}
                 />
               )}
               {activeView === "certificates" && (
@@ -814,6 +1007,7 @@ export default function DashboardPage() {
                   triggerTask={triggerTask}
                   baseUrl={baseUrl}
                   username={username}
+                  fetchProfileData={fetchProfileData}
                 />
               )}
               {activeView === "skills" && <SkillsView projects={projects} certificates={certificates} />}
@@ -942,6 +1136,213 @@ export default function DashboardPage() {
               Verify Ledger
             </button>
           </div>
+        </div>
+      </NeubrutalModal>
+
+      {/* Task: Add Photo Modal */}
+      <NeubrutalModal isOpen={activeTaskModal === "add-photo"} onClose={() => setActiveTaskModal(null)} title="Update Profile Photo">
+        <div className="space-y-4 pt-2">
+          <div>
+            <label className="block font-label-caps text-[10px] font-bold uppercase mb-1">Photo Image Link URL</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={photoUrlInput}
+                onChange={(e) => setPhotoUrlInput(e.target.value)}
+                placeholder="https://images.unsplash.com/... or cloudinary link"
+                className="flex-1 border-[2px] border-on-surface p-2 bg-white rounded focus:outline-none text-xs"
+              />
+              <button
+                onClick={() => handleSavePhoto(photoUrlInput)}
+                className="px-4 py-2 bg-secondary-container text-on-secondary-container border-[2px] border-on-surface text-xs font-bold rounded cursor-pointer"
+              >
+                Save Url
+              </button>
+            </div>
+          </div>
+
+          <div className="relative flex py-2 items-center">
+            <div className="flex-grow border-t border-on-surface/10"></div>
+            <span className="flex-shrink mx-4 text-on-surface-variant/50 text-[10px] font-bold uppercase">Or Upload File</span>
+            <div className="flex-grow border-t border-on-surface/10"></div>
+          </div>
+
+          <div>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleUploadPhotoFile}
+              disabled={isUploadingPhoto}
+              className="hidden"
+              id="avatar-file-upload"
+            />
+            <label
+              htmlFor="avatar-file-upload"
+              className={`w-full flex items-center justify-center p-4 border-[2px] border-dashed border-on-surface rounded-lg bg-surface-container-low cursor-pointer hover:bg-slate-50 transition-colors gap-2 ${
+                isUploadingPhoto ? "opacity-50 pointer-events-none" : ""
+              }`}
+            >
+              <span className="material-symbols-outlined text-primary text-[24px]">upload_file</span>
+              <span className="text-xs font-bold text-on-surface">
+                {isUploadingPhoto ? "Uploading file..." : "Choose profile photo image file"}
+              </span>
+            </label>
+          </div>
+
+          {checkedTasks.avatarUrl && (
+            <div className="p-3 border-[2px] border-on-surface bg-[#F0FFF4] rounded-lg flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <img src={checkedTasks.avatarUrl} alt="Avatar" className="w-10 h-10 rounded-full border border-on-surface object-cover" />
+                <span className="font-mono text-[9px] font-bold text-secondary truncate max-w-[150px]">
+                  {checkedTasks.avatarUrl}
+                </span>
+              </div>
+              <button
+                onClick={async () => {
+                  const nextTasks = { ...checkedTasks, "add-photo": false, avatarUrl: "" };
+                  setCheckedTasks(nextTasks);
+                  await saveProfileCheckedTasks(nextTasks);
+                  await logActivity("Removed profile photo", "info");
+                  triggerToast("Profile photo removed.", "info");
+                  setActiveTaskModal(null);
+                  await fetchProfileData();
+                }}
+                className="px-2 py-1 bg-white hover:bg-error-container hover:text-on-error-container text-error border border-on-surface text-[10px] font-bold rounded cursor-pointer"
+              >
+                Clear
+              </button>
+            </div>
+          )}
+        </div>
+      </NeubrutalModal>
+
+      {/* Task: Connect GitHub Modal */}
+      <NeubrutalModal isOpen={activeTaskModal === "connect-github"} onClose={() => setActiveTaskModal(null)} title="Connect GitHub Registry">
+        <div className="space-y-4 pt-2">
+          <p className="text-xs text-on-surface-variant leading-relaxed">
+            Link your GitHub profile identifier to verify open-source footprints and sync project commits automatically.
+          </p>
+
+          <div>
+            <label className="block font-label-caps text-[10px] font-bold uppercase mb-1">GitHub Username or URL</label>
+            <input
+              type="text"
+              value={githubUsernameInput}
+              onChange={(e) => setGithubUsernameInput(e.target.value)}
+              placeholder="e.g. aswinsaravanan29-blip"
+              className="w-full border-[2px] border-on-surface p-2 bg-white rounded focus:outline-none text-xs"
+            />
+          </div>
+
+          <div className="pt-4 border-t border-on-surface/10 flex justify-end gap-2">
+            {checkedTasks["connect-github"] && (
+              <button
+                onClick={handleDisconnectGitHub}
+                className="px-4 py-2 border border-on-surface bg-white text-error text-xs font-bold rounded cursor-pointer"
+              >
+                Disconnect
+              </button>
+            )}
+            <button
+              onClick={handleSaveGitHub}
+              className="px-4 py-2 bg-secondary-container text-on-secondary-container border-[2px] border-on-surface text-xs font-bold rounded cursor-pointer"
+            >
+              Verify & Link
+            </button>
+          </div>
+        </div>
+      </NeubrutalModal>
+
+      {/* Task: Connect LinkedIn Modal */}
+      <NeubrutalModal isOpen={activeTaskModal === "connect-linkedin"} onClose={() => setActiveTaskModal(null)} title="Connect LinkedIn Identity">
+        <div className="space-y-4 pt-2">
+          <p className="text-xs text-on-surface-variant leading-relaxed">
+            Enter your LinkedIn profile link to verify employment history, corporate connections, and professional badges.
+          </p>
+
+          <div>
+            <label className="block font-label-caps text-[10px] font-bold uppercase mb-1">LinkedIn Profile Link URL</label>
+            <input
+              type="text"
+              value={linkedinUrlInput}
+              onChange={(e) => setLinkedinUrlInput(e.target.value)}
+              placeholder="linkedin.com/in/username"
+              className="w-full border-[2px] border-on-surface p-2 bg-white rounded focus:outline-none text-xs"
+            />
+          </div>
+
+          <div className="pt-4 border-t border-on-surface/10 flex justify-end gap-2">
+            {checkedTasks["connect-linkedin"] && (
+              <button
+                onClick={handleDisconnectLinkedIn}
+                className="px-4 py-2 border border-on-surface bg-white text-error text-xs font-bold rounded cursor-pointer"
+              >
+                Disconnect
+              </button>
+            )}
+            <button
+              onClick={handleSaveLinkedIn}
+              className="px-4 py-2 bg-secondary-container text-on-secondary-container border-[2px] border-on-surface text-xs font-bold rounded cursor-pointer"
+            >
+              Save Link
+            </button>
+          </div>
+        </div>
+      </NeubrutalModal>
+
+      {/* Task: Upload Resume Modal */}
+      <NeubrutalModal isOpen={activeTaskModal === "upload-resume"} onClose={() => setActiveTaskModal(null)} title="Upload Professional Resume">
+        <div className="space-y-4 pt-2">
+          <p className="text-xs text-on-surface-variant leading-relaxed">
+            Upload your resume PDF to link it directly to your verified builder profile and show a fast one-click download option for recruiters.
+          </p>
+
+          <div>
+            <input
+              type="file"
+              accept=".pdf,.doc,.docx"
+              onChange={handleUploadResumeFile}
+              disabled={isUploadingResume}
+              className="hidden"
+              id="resume-file-upload"
+            />
+            <label
+              htmlFor="resume-file-upload"
+              className={`w-full flex flex-col items-center justify-center p-6 border-[2px] border-dashed border-on-surface rounded-lg bg-surface-container-low cursor-pointer hover:bg-slate-50 transition-colors gap-2 ${
+                isUploadingResume ? "opacity-50 pointer-events-none" : ""
+              }`}
+            >
+              <span className="material-symbols-outlined text-primary text-[32px]">upload_file</span>
+              <span className="text-xs font-bold text-on-surface">
+                {isUploadingResume ? "Uploading PDF document..." : "Choose resume file (PDF, DOCX)"}
+              </span>
+            </label>
+          </div>
+
+          {checkedTasks.resumeUrl && (
+            <div className="p-3 border-[2px] border-on-surface bg-[#F0FFF4] rounded-lg flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[20px] text-secondary">check_circle</span>
+                <span className="text-xs font-bold text-on-surface truncate max-w-[150px]">
+                  Resume Uploaded
+                </span>
+                <a
+                  href={checkedTasks.resumeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono text-[9px] text-primary underline hover:text-primary/80 font-bold ml-1"
+                >
+                  View Attachment
+                </a>
+              </div>
+              <button
+                onClick={handleDisconnectResume}
+                className="px-2 py-1 bg-white hover:bg-error-container hover:text-on-error-container text-error border border-on-surface text-[10px] font-bold rounded cursor-pointer"
+              >
+                Delete File
+              </button>
+            </div>
+          )}
         </div>
       </NeubrutalModal>
 

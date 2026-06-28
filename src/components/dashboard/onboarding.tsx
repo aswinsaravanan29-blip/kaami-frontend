@@ -36,19 +36,31 @@ export default function Onboarding({ onComplete, onSkip, baseUrl }: OnboardingPr
     }
   }, []);
 
-  // Check username availability mock
+  // Check username availability in real-time against backend database
   useEffect(() => {
     if (username.length < 3) {
       setIsAvailable(false);
       return;
     }
+
     setIsChecking(true);
-    const delayDebounceFn = setTimeout(() => {
-      setIsChecking(false);
-      // Mock validation: "admin", "jobs", "discover" are reserved
-      const reserved = ["admin", "discover", "jobs", "verified", "community", "marketplace"];
-      setIsAvailable(!reserved.includes(username.toLowerCase()));
-    }, 400);
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+        const res = await fetch(`${backendUrl}/api/profile/check-username/${encodeURIComponent(username.toLowerCase())}`);
+        if (res.ok) {
+          const data = await res.json();
+          setIsAvailable(data.available);
+        } else {
+          setIsAvailable(false);
+        }
+      } catch (e) {
+        console.error(e);
+        setIsAvailable(false);
+      } finally {
+        setIsChecking(false);
+      }
+    }, 450);
 
     return () => clearTimeout(delayDebounceFn);
   }, [username]);
@@ -93,9 +105,9 @@ export default function Onboarding({ onComplete, onSkip, baseUrl }: OnboardingPr
   ];
 
   return (
-    <div className="w-full max-w-4xl bg-white border-[3px] border-on-surface neubrutal-shadow rounded-xl overflow-hidden flex flex-col md:flex-row animate-scale-up">
+    <div className="w-full max-w-4xl bg-white border-[3px] border-on-surface neubrutal-shadow rounded-xl overflow-hidden flex flex-col md:flex-row h-[90vh] md:h-[620px] max-h-[90vh] md:max-h-[620px] animate-scale-up">
       {/* Sidebar with step indicator */}
-      <div className="hidden md:flex md:w-1/3 bg-[#FFF9E6] border-r-[3px] border-on-surface p-8 flex-col justify-between">
+      <div className="hidden md:flex md:w-1/3 bg-[#FFF9E6] border-r-[3px] border-on-surface p-8 flex-col justify-between h-full shrink-0">
         <div>
           <span className="font-display text-headline-md font-black italic tracking-tighter text-on-surface uppercase block mb-6">
             Kaami Setup
@@ -148,9 +160,9 @@ export default function Onboarding({ onComplete, onSkip, baseUrl }: OnboardingPr
       </div>
 
       {/* Main Form content */}
-      <div className="flex-1 p-6 sm:p-8 flex flex-col justify-between bg-surface min-h-[480px]">
+      <div className="flex-1 flex flex-col bg-surface h-full overflow-hidden">
         {/* PROGRESS INDICATOR TOP */}
-        <div className="flex flex-col gap-3 mb-6">
+        <div className="p-6 sm:p-8 pb-3 shrink-0 flex flex-col gap-3">
           <div className="flex justify-between items-center">
             <span className="font-label-caps text-[10px] text-on-surface-variant font-bold bg-white border-[2px] border-on-surface px-2.5 py-0.5 rounded-full">
               Step {step} of 5
@@ -190,7 +202,7 @@ export default function Onboarding({ onComplete, onSkip, baseUrl }: OnboardingPr
         </div>
 
         {/* STEP CONTENT SWITCHER */}
-        <div className="flex-1 flex flex-col justify-center">
+        <div className="flex-1 overflow-y-auto px-6 sm:px-8 py-2 flex flex-col justify-center">
           {/* STEP 1: WELCOME */}
           {step === 1 && (
             <div className="space-y-6">
@@ -451,34 +463,34 @@ export default function Onboarding({ onComplete, onSkip, baseUrl }: OnboardingPr
         </div>
 
         {/* BOTTOM NAV BUTTONS */}
-        <div className="flex justify-between mt-8 pt-4 border-t-2 border-on-surface/20">
+        <div className="flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-3 p-6 sm:p-8 pt-4 border-t-2 border-on-surface/20 shrink-0 bg-white">
           {step > 1 ? (
             <button
               onClick={handleBack}
-              className="px-4 py-2 border-[2px] border-on-surface bg-white text-on-surface font-bold rounded-lg hover:bg-slate-50 flex items-center gap-1 cursor-pointer transition-colors"
+              className="px-4 py-2.5 border-[2px] border-on-surface bg-white text-on-surface font-bold rounded-lg hover:bg-slate-50 flex items-center justify-center gap-1 cursor-pointer transition-colors w-full sm:w-auto"
             >
               <span className="material-symbols-outlined text-[18px]">arrow_back</span>
               Back
             </button>
           ) : (
-            <div />
+            <div className="hidden sm:block" />
           )}
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
             {step === 5 ? (
               <>
                 <a
                   href={`/${username}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-4 py-2 border-[2px] border-on-surface bg-white text-on-surface font-bold rounded-lg hover:bg-slate-50 cursor-pointer flex items-center gap-1.5 transition-all text-xs"
+                  className="px-4 py-2.5 border-[2px] border-on-surface bg-white text-on-surface font-bold rounded-lg hover:bg-slate-50 cursor-pointer flex items-center justify-center gap-1.5 transition-all text-xs w-full sm:w-auto"
                 >
                   <span className="material-symbols-outlined text-[16px]">open_in_new</span>
                   View Profile
                 </a>
                 <NeubrutalButton
                   onClick={handleNext}
-                  className="px-6 py-3 bg-primary-container text-on-primary-container font-headline-md text-headline-md"
+                  className="px-6 py-3 bg-primary-container text-on-primary-container font-headline-md text-headline-md w-full sm:w-auto text-center flex justify-center"
                   shadowSize="sm"
                 >
                   Open Dashboard
@@ -488,7 +500,7 @@ export default function Onboarding({ onComplete, onSkip, baseUrl }: OnboardingPr
               <NeubrutalButton
                 onClick={handleNext}
                 disabled={step === 3 && (!username || !isAvailable || isChecking)}
-                className={`px-8 py-3 bg-primary-container text-on-primary-container font-headline-md text-headline-md ${
+                className={`px-8 py-3 bg-primary-container text-on-primary-container font-headline-md text-headline-md w-full sm:w-auto text-center flex justify-center ${
                   step === 3 && (!username || !isAvailable || isChecking) ? "opacity-50 cursor-not-allowed" : ""
                 }`}
                 shadowSize="sm"

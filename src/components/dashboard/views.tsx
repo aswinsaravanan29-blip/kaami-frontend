@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import NeubrutalButton from "../interactive-button";
 import { NeubrutalModal, NeubrutalDrawer } from "./global-components";
+const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
 
 // Helper for verified badges
 const VerifiedBadge = () => (
@@ -18,7 +19,7 @@ interface DashboardHomeProps {
   username: string;
   profession: string;
   triggerToast: (msg: string, type: "success" | "error" | "info" | "sync") => void;
-  checkedTasks: Record<string, boolean>;
+  checkedTasks: Record<string, any>;
   onToggleTask: (taskId: string) => void;
   openTrustModal: () => void;
   activities: any[];
@@ -89,16 +90,32 @@ export function DashboardHomeView({
   return (
     <div className="space-y-6">
       {/* Welcome status header */}
-      <div className="bg-[#FFE5A3] border-[3px] border-on-surface p-6 neubrutal-shadow-sm rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-fade-in">
+      <div className="bg-[#FFE5A3] border-[3px] border-on-surface p-4 sm:p-6 neubrutal-shadow-sm rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-3 md:gap-4 animate-fade-in">
         <div>
           <div className="font-label-caps text-xs text-on-surface-variant font-bold uppercase tracking-wider mb-1">
             System Node: Active
           </div>
-          <h2 className="font-display text-2xl md:text-3xl font-black text-on-surface">
+          <h2 className="font-display text-xl sm:text-2xl md:text-3xl font-black text-on-surface">
             Welcome, {displayName || "Builder"}
           </h2>
-          <p className="font-mono text-xs text-primary mt-1">
-            Public identity: {baseUrl}/{username || "..."} • Short link: km.to/{username || "..."}
+          <p className="font-mono text-[11px] sm:text-xs text-primary mt-1 leading-relaxed">
+            <span className="text-on-surface-variant/80 font-bold block sm:inline sm:mr-1">Public identity:</span>
+            {username ? (
+              <a
+                href={`http://${baseUrl}/${username}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline font-bold hover:text-on-surface transition-colors break-all block sm:inline"
+              >
+                http://{baseUrl}/{username}
+              </a>
+            ) : (
+              <span className="break-all block sm:inline">http://{baseUrl}/...</span>
+            )}{" "}
+            <span className="hidden sm:inline text-on-surface-variant/40 mx-1.5">•</span>
+            <span className="block sm:inline text-on-surface-variant/60 mt-0.5 sm:mt-0 text-[10px] sm:text-xs font-sans sm:font-mono">
+              (Click to preview live profile)
+            </span>
           </p>
         </div>
         <div className="flex gap-2">
@@ -148,20 +165,20 @@ export function DashboardHomeView({
                 { id: "publish-profile", label: "Publish profile" },
                 { id: "share-profile", label: "Share profile" }
               ].map((task) => (
-                <label
+                <button
                   key={task.id}
-                  className="flex items-center gap-3 p-3 border-[2px] border-on-surface rounded-lg bg-white hover:bg-slate-50 cursor-pointer select-none transition-colors"
+                  onClick={() => handleTaskClick(task.id, task.label)}
+                  className="flex items-center gap-3 p-3 border-[2px] border-on-surface rounded-lg bg-white hover:bg-slate-50 cursor-pointer select-none transition-colors w-full text-left"
                 >
-                  <input
-                    type="checkbox"
-                    checked={!!checkedTasks[task.id]}
-                    onChange={() => handleTaskClick(task.id, task.label)}
-                    className="w-5 h-5 border-[2px] border-on-surface rounded checked:bg-secondary cursor-pointer focus:ring-0"
-                  />
-                  <span className={`font-body-md text-[13px] font-bold ${checkedTasks[task.id] ? "line-through text-on-surface-variant/40" : "text-on-surface"}`}>
+                  <div className={`w-5 h-5 border-[2px] border-on-surface rounded flex items-center justify-center shrink-0 transition-colors ${checkedTasks[task.id] ? "bg-secondary text-white border-secondary" : "bg-white"}`}>
+                    {checkedTasks[task.id] && (
+                      <span className="material-symbols-outlined text-[14px] font-black">check</span>
+                    )}
+                  </div>
+                  <span className={`font-body-md text-[13px] font-bold ${checkedTasks[task.id] ? "line-through text-on-surface-variant/40 font-medium" : "text-on-surface"}`}>
                     {task.label}
                   </span>
-                </label>
+                </button>
               ))}
             </div>
           </div>
@@ -472,6 +489,7 @@ interface ProjectsViewProps {
   triggerTask: (taskId: string) => void;
   baseUrl: string;
   username: string;
+  fetchProfileData?: () => Promise<void>;
 }
 
 export function ProjectsView({
@@ -481,7 +499,8 @@ export function ProjectsView({
   addActivity,
   triggerTask,
   baseUrl,
-  username
+  username,
+  fetchProfileData
 }: ProjectsViewProps) {
   const [layout, setLayout] = useState<"grid" | "list">("grid");
   const [filterYear, setFilterYear] = useState("all");
@@ -495,38 +514,76 @@ export function ProjectsView({
   const [link, setLink] = useState("");
   const [year, setYear] = useState("2026");
 
-  const handleAddProject = (e: React.FormEvent) => {
+  const handleAddProject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !desc) {
       triggerToast("Please provide a title and description.", "error");
       return;
     }
 
+    const token = localStorage.getItem("token");
+    if (!token) {
+      triggerToast("Authentication token not found.", "error");
+      return;
+    }
+
     const techArray = tech.split(",").map((t) => t.trim()).filter(Boolean);
-    const newProj = {
-      id: title.toLowerCase().replace(/\s+/g, "-"),
-      title,
-      desc,
-      tech: techArray.length > 0 ? techArray : ["Web"],
-      metrics: { stars: "0", forks: "0", visits: "0" },
-      proofCount: 1,
-      liveLink: link || "github.com",
-      year,
-      status: "Verified",
-      image: "bg-[#006b5b]"
-    };
+    const projectId = title.toLowerCase().replace(/\s+/g, "-");
 
-    setProjects((prev) => [...prev, newProj]);
-    triggerTask("add-project");
-    addActivity(`Project '${title}' added to proof ledger`, "success");
-    triggerToast(`Project '${title}' published successfully!`, "success");
+    try {
+      const res = await fetch(`${backendUrl}/api/profile/project`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          id: projectId,
+          title,
+          description: desc,
+          tech: techArray.length > 0 ? techArray : ["Web"],
+          link: link || "github.com",
+          year
+        })
+      });
 
-    // Reset form
-    setTitle("");
-    setDesc("");
-    setTech("");
-    setLink("");
-    setIsAddModalOpen(false);
+      if (!res.ok) {
+        throw new Error("Failed to save project to registry");
+      }
+
+      if (fetchProfileData) {
+        await fetchProfileData();
+      } else {
+        const newProj = {
+          id: projectId,
+          title,
+          description: desc,
+          tech: techArray.length > 0 ? techArray : ["Web"],
+          stars: "0",
+          forks: "0",
+          visits: "0",
+          proofCount: 1,
+          link: link || "github.com",
+          year,
+          status: "Verified"
+        };
+        setProjects((prev) => [...prev, newProj]);
+      }
+
+      triggerTask("add-project");
+      addActivity(`Project '${title}' added to proof ledger`, "success");
+      triggerToast(`Project '${title}' published successfully!`, "success");
+
+      // Reset form
+      setTitle("");
+      setDesc("");
+      setTech("");
+      setLink("");
+      setIsAddModalOpen(false);
+    } catch (err: any) {
+      console.error(err);
+      triggerToast(err.message || "Failed to publish project to server.", "error");
+    }
   };
 
   const filtered = projects.filter((p) => filterYear === "all" || p.year === filterYear);
@@ -596,7 +653,7 @@ export function ProjectsView({
                 <div className="p-4 space-y-1.5">
                   <h4 className="font-headline-md text-base font-black text-on-surface">{proj.title}</h4>
                   <p className="font-body-md text-xs text-on-surface-variant leading-normal line-clamp-2">
-                    {proj.desc}
+                    {proj.description || proj.desc}
                   </p>
                 </div>
               </div>
@@ -609,7 +666,7 @@ export function ProjectsView({
                   ))}
                 </div>
                 <div className="flex justify-between items-center text-[10px] font-mono text-on-surface-variant/70 pt-1 border-t border-on-surface/5">
-                  <span>Stars: {proj.metrics.stars}</span>
+                  <span>Stars: {proj.stars || proj.metrics?.stars || "0"}</span>
                   <span className="text-primary font-bold">Verified Details →</span>
                 </div>
               </div>
@@ -634,7 +691,7 @@ export function ProjectsView({
                     <span className="font-mono text-[10px] text-on-surface-variant">{proj.year}</span>
                     <VerifiedBadge />
                   </div>
-                  <p className="font-body-md text-xs text-on-surface-variant/80 mt-0.5 line-clamp-1">{proj.desc}</p>
+                  <p className="font-body-md text-xs text-on-surface-variant/80 mt-0.5 line-clamp-1">{proj.description || proj.desc}</p>
                 </div>
               </div>
               <span className="px-2.5 py-1 bg-surface-container-low border border-on-surface rounded font-mono text-[9px] font-bold self-end sm:self-auto">
@@ -729,7 +786,7 @@ export function ProjectsView({
         {selectedProject && (
           <div className="space-y-4 pt-2">
             <div className="p-3 bg-surface-container-low border-[2px] border-on-surface rounded font-body-sm text-xs leading-relaxed text-on-surface-variant">
-              {selectedProject.desc}
+              {selectedProject.description || selectedProject.desc}
             </div>
             <div className="grid grid-cols-2 gap-3 text-xs font-mono">
               <div className="p-2 border border-on-surface rounded">
@@ -768,7 +825,8 @@ export function ProjectsView({
                 </button>
                 <button
                   onClick={() => {
-                    window.open(`https://${selectedProject.liveLink}`, "_blank");
+                    const targetLink = selectedProject.link || selectedProject.liveLink || "github.com";
+                    window.open(targetLink.startsWith("http") ? targetLink : `https://${targetLink}`, "_blank");
                     setSelectedProject(null);
                   }}
                   className="px-3 py-1 bg-secondary-container border border-on-surface font-bold text-xs rounded cursor-pointer"
@@ -793,6 +851,11 @@ interface ProofsProps {
   certificates: any[];
   testimonials: any[];
   baseUrl: string;
+  experiences: any[];
+  fetchProfileData: () => Promise<void>;
+  triggerToast: (msg: string, type: any) => void;
+  addActivity: (txt: string, type: string) => void;
+  triggerTask: (taskId: string) => void;
 }
 
 export function ProofsView({
@@ -802,9 +865,21 @@ export function ProofsView({
   projects,
   certificates,
   testimonials,
-  baseUrl
+  baseUrl,
+  experiences,
+  fetchProfileData,
+  triggerToast,
+  addActivity,
+  triggerTask
 }: ProofsProps) {
   const [activeCategory, setActiveCategory] = useState("all");
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  
+  const [role, setRole] = useState("");
+  const [company, setCompany] = useState("");
+  const [timePeriod, setTimePeriod] = useState("");
+  const [description, setDescription] = useState("");
+  const [evidenceStr, setEvidenceStr] = useState("");
 
   const categories = [
     { id: "all", label: "All Evidence" },
@@ -814,26 +889,96 @@ export function ProofsView({
     { id: "testimonial", label: "Endorsements" }
   ];
 
-  // Derive proofs dynamically to prevent "fake data"!
-  const dynamicProofs: any[] = [
-    {
-      category: "experience",
-      title: `${profession.charAt(0).toUpperCase() + profession.slice(1)} Setup`,
-      institution: "Kaami Ledger Registry",
-      time: "2026",
-      desc: `Registered identity node reserved for display name: '${displayName}'.`,
-      evidence: ["Identity OAuth Signature", "Reserved slug /" + username]
+  const handleSaveExperience = async () => {
+    if (!role || !company || !timePeriod) {
+      triggerToast("Role, company, and period are required.", "error");
+      return;
     }
-  ];
+
+    const evidence = evidenceStr ? evidenceStr.split(",").map(e => e.trim()) : [];
+    const token = localStorage.getItem("token");
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+
+    try {
+      const res = await fetch(`${backendUrl}/api/profile/experience`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ role, company, timePeriod, description, evidence })
+      });
+
+      if (res.ok) {
+        triggerToast("Experience logged successfully!", "success");
+        addActivity(`Added experience node: ${role} at ${company}`, "success");
+        triggerTask("add-experience");
+        
+        setRole("");
+        setCompany("");
+        setTimePeriod("");
+        setDescription("");
+        setEvidenceStr("");
+        setIsFormOpen(false);
+        
+        await fetchProfileData();
+      } else {
+        triggerToast("Failed to save experience node", "error");
+      }
+    } catch (err) {
+      console.error(err);
+      triggerToast("Connection error", "error");
+    }
+  };
+
+  const handleDeleteExperience = async (id: number) => {
+    const token = localStorage.getItem("token");
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+
+    try {
+      const res = await fetch(`${backendUrl}/api/profile/experience/${id}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
+
+      if (res.ok) {
+        triggerToast("Experience node removed", "success");
+        addActivity("Removed experience node", "info");
+        await fetchProfileData();
+      } else {
+        triggerToast("Failed to delete experience", "error");
+      }
+    } catch (err) {
+      console.error(err);
+      triggerToast("Connection error", "error");
+    }
+  };
+
+  const dynamicProofs: any[] = [];
+
+  experiences.forEach((exp) => {
+    dynamicProofs.push({
+      id: exp.id,
+      isRealExperience: true,
+      category: "experience",
+      title: exp.role,
+      institution: exp.company,
+      time: exp.time_period,
+      desc: exp.description,
+      evidence: exp.evidence || []
+    });
+  });
 
   projects.forEach((proj) => {
     dynamicProofs.push({
       category: "opensource",
       title: proj.title,
-      institution: proj.liveLink,
+      institution: proj.liveLink || "GitHub Sync",
       time: proj.year,
-      desc: proj.desc,
-      evidence: ["Commit Key Verify", `${proj.tech.length} languages synced`]
+      desc: proj.description,
+      evidence: proj.tech || []
     });
   });
 
@@ -842,9 +987,9 @@ export function ProofsView({
       category: "certificate",
       title: cert.title,
       institution: cert.issuer,
-      time: cert.date,
-      desc: `Cryptographically verified credential ID: ${cert.credId}. Verification verified on blockchain source endpoint.`,
-      evidence: ["Credly Registry doc", "Signed response token"]
+      time: cert.issue_date,
+      desc: `Cryptographically verified credential ID: ${cert.credential_id || "N/A"}.`,
+      evidence: ["Verified response credentials token"]
     });
   });
 
@@ -855,7 +1000,7 @@ export function ProofsView({
       institution: test.role,
       time: "2026",
       desc: `"${test.quote}"`,
-      evidence: ["Peer Signature verified", "Signed manager hash"]
+      evidence: ["Peer verification signature", "Signed metadata hash"]
     });
   });
 
@@ -879,34 +1024,135 @@ export function ProofsView({
         </div>
       </div>
 
-      <div className="relative border-l-[3px] border-on-surface ml-4 pl-8 space-y-6 py-4">
-        {filtered.map((proof, i) => (
-          <div key={i} className="relative">
-            <div className="absolute -left-[45px] top-1.5 w-7 h-7 rounded-full border-[2px] border-on-surface bg-white flex items-center justify-center">
-              <span className="material-symbols-outlined text-[14px]">
-                {proof.category === "experience" ? "badge" : proof.category === "opensource" ? "code" : "verified"}
-              </span>
+      {/* EXPERIENCE ENTRY FORM CARD */}
+      <div className="bg-[#FFE5A3] border-[3px] border-on-surface p-5 neubrutal-shadow-sm rounded-xl">
+        <div className="flex justify-between items-center flex-wrap gap-3">
+          <div>
+            <h3 className="font-headline-md text-base font-black uppercase text-on-surface">Experience Ledger</h3>
+            <p className="font-body-sm text-[11px] text-on-surface-variant">Log real employment work evidence nodes to increase verified trust.</p>
+          </div>
+          <button
+            onClick={() => setIsFormOpen(!isFormOpen)}
+            className="px-4 py-2 bg-primary-container text-on-primary-container font-bold text-xs border-[2px] border-on-surface rounded neubrutal-shadow-sm hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none active:translate-x-[2px] active:translate-y-[2px] transition-all cursor-pointer"
+          >
+            {isFormOpen ? "Cancel" : "+ Add Experience Node"}
+          </button>
+        </div>
+
+        {isFormOpen && (
+          <div className="mt-4 pt-4 border-t-2 border-on-surface/10 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block font-label-caps text-[10px] text-on-surface-variant font-bold uppercase mb-1">Role / Job Title</label>
+                <input
+                  type="text"
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                  placeholder="e.g. Senior Software Engineer"
+                  className="w-full border-[2px] border-on-surface p-2 bg-white font-mono text-xs rounded focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block font-label-caps text-[10px] text-on-surface-variant font-bold uppercase mb-1">Company / Organization</label>
+                <input
+                  type="text"
+                  value={company}
+                  onChange={(e) => setCompany(e.target.value)}
+                  placeholder="e.g. Google DeepMind"
+                  className="w-full border-[2px] border-on-surface p-2 bg-white font-mono text-xs rounded focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block font-label-caps text-[10px] text-on-surface-variant font-bold uppercase mb-1">Time Period</label>
+                <input
+                  type="text"
+                  value={timePeriod}
+                  onChange={(e) => setTimePeriod(e.target.value)}
+                  placeholder="e.g. 2024 - Present"
+                  className="w-full border-[2px] border-on-surface p-2 bg-white font-mono text-xs rounded focus:outline-none"
+                />
+              </div>
             </div>
 
-            <div className="bg-white border-[3px] border-on-surface p-5 neubrutal-shadow-sm rounded-xl space-y-2">
-              <div className="flex justify-between items-start gap-2">
-                <div>
-                  <h4 className="font-headline-md text-sm font-black">{proof.title}</h4>
-                  <span className="text-[11px] text-on-surface-variant font-bold">{proof.institution} • {proof.time}</span>
-                </div>
-                <VerifiedBadge />
-              </div>
-              <p className="text-xs text-on-surface-variant leading-relaxed">{proof.desc}</p>
-              <div className="flex flex-wrap gap-2 pt-2 border-t border-on-surface/5 mt-2">
-                {proof.evidence.map((ev: string, idx: number) => (
-                  <span key={idx} className="px-2 py-0.5 bg-slate-100 border border-on-surface rounded text-[9.5px] font-mono font-bold text-on-surface-variant/80">
-                    ✓ {ev}
-                  </span>
-                ))}
-              </div>
+            <div>
+              <label className="block font-label-caps text-[10px] text-on-surface-variant font-bold uppercase mb-1">Description</label>
+              <textarea
+                rows={3}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Detail your responsibilities and verified project footprints..."
+                className="w-full border-[2px] border-on-surface p-2 bg-white font-sans text-xs rounded focus:outline-none resize-none"
+              />
+            </div>
+
+            <div>
+              <label className="block font-label-caps text-[10px] text-on-surface-variant font-bold uppercase mb-1">Verification Evidence Links (comma-separated)</label>
+              <input
+                type="text"
+                value={evidenceStr}
+                onChange={(e) => setEvidenceStr(e.target.value)}
+                placeholder="e.g. Employment Contract, Manager Endorsement Link"
+                className="w-full border-[2px] border-on-surface p-2 bg-white font-mono text-xs rounded focus:outline-none"
+              />
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={handleSaveExperience}
+                className="px-5 py-2.5 bg-secondary-container text-on-secondary-container font-black text-xs border-[2px] border-on-surface rounded neubrutal-shadow-sm hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none active:translate-x-[2px] active:translate-y-[2px] transition-all cursor-pointer"
+              >
+                Commit Experience Node
+              </button>
             </div>
           </div>
-        ))}
+        )}
+      </div>
+
+      <div className="relative border-l-[3px] border-on-surface ml-4 pl-8 space-y-6 py-4">
+        {filtered.length === 0 ? (
+          <div className="font-mono text-xs text-on-surface-variant italic">No evidence records logged in this category.</div>
+        ) : (
+          filtered.map((proof, i) => (
+            <div key={i} className="relative">
+              <div className="absolute -left-[45px] top-1.5 w-7 h-7 rounded-full border-[2px] border-on-surface bg-white flex items-center justify-center">
+                <span className="material-symbols-outlined text-[14px]">
+                  {proof.category === "experience" ? "badge" : proof.category === "opensource" ? "code" : "verified"}
+                </span>
+              </div>
+
+              <div className="bg-white border-[3px] border-on-surface p-5 neubrutal-shadow-sm rounded-xl space-y-2">
+                <div className="flex justify-between items-start gap-2">
+                  <div>
+                    <h4 className="font-headline-md text-sm font-black">{proof.title}</h4>
+                    <span className="text-[11px] text-on-surface-variant font-bold">{proof.institution} • {proof.time}</span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {proof.isRealExperience && (
+                      <button
+                        onClick={() => handleDeleteExperience(proof.id)}
+                        className="p-1 hover:text-error text-on-surface-variant transition-colors cursor-pointer flex items-center justify-center"
+                        title="Delete Experience Node"
+                      >
+                        <span className="material-symbols-outlined text-[16px] font-bold">delete</span>
+                      </button>
+                    )}
+                    <VerifiedBadge />
+                  </div>
+                </div>
+                {proof.desc && <p className="text-xs text-on-surface-variant leading-relaxed">{proof.desc}</p>}
+                {proof.evidence && proof.evidence.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pt-2 border-t border-on-surface/5 mt-2">
+                    {proof.evidence.map((ev: string, idx: number) => (
+                      <span key={idx} className="px-2 py-0.5 bg-slate-100 border border-on-surface rounded text-[9.5px] font-mono font-bold text-on-surface-variant/80">
+                        ✓ {ev}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
@@ -921,6 +1167,7 @@ interface CertificatesProps {
   triggerTask: (taskId: string) => void;
   baseUrl: string;
   username: string;
+  fetchProfileData?: () => Promise<void>;
 }
 
 export function CertificatesView({
@@ -930,7 +1177,8 @@ export function CertificatesView({
   addActivity,
   triggerTask,
   baseUrl,
-  username
+  username,
+  fetchProfileData
 }: CertificatesProps) {
   const [search, setSearch] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -941,34 +1189,115 @@ export function CertificatesView({
   const [issuer, setIssuer] = useState("");
   const [credId, setCredId] = useState("");
   const [date, setDate] = useState("June 2026");
+  const [fileUrl, setFileUrl] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
 
-  const handleAddCert = (e: React.FormEvent) => {
+  const handleUploadCertFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      triggerToast("Authentication token not found.", "error");
+      return;
+    }
+
+    setIsUploading(true);
+    triggerToast("Uploading proof document...", "info");
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch(`${backendUrl}/api/upload`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      if (!res.ok) {
+        throw new Error("Upload failed");
+      }
+
+      const data = await res.json();
+      setFileUrl(data.secure_url);
+      triggerToast("Proof document uploaded successfully!", "success");
+    } catch (err) {
+      console.error(err);
+      triggerToast("Failed to upload proof document.", "error");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleAddCert = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !issuer) {
       triggerToast("Title and Issuer are required.", "error");
       return;
     }
 
-    const newCert = {
-      id: title.toLowerCase().replace(/\s+/g, "-"),
-      title,
-      issuer,
-      date,
-      credId: credId || `KM-CERT-${Math.floor(1000 + Math.random() * 9000)}`,
-      url: "verify.kaami.io",
-      verified: true
-    };
+    const token = localStorage.getItem("token");
+    if (!token) {
+      triggerToast("Authentication token not found.", "error");
+      return;
+    }
 
-    setCertificates((prev) => [...prev, newCert]);
-    triggerTask("add-certificate");
-    addActivity(`Certificate '${title}' synced with verified status`, "success");
-    triggerToast(`Certificate '${title}' successfully synced!`, "success");
+    const certificateId = title.toLowerCase().replace(/\s+/g, "-");
+    const generatedCredId = credId || `KM-CERT-${Math.floor(1000 + Math.random() * 9000)}`;
 
-    // Reset Form
-    setTitle("");
-    setIssuer("");
-    setCredId("");
-    setIsAddOpen(false);
+    try {
+      const res = await fetch(`${backendUrl}/api/profile/certificate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          id: certificateId,
+          title,
+          issuer,
+          credId: generatedCredId,
+          date,
+          fileUrl: fileUrl || null
+        })
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to save certificate proof");
+      }
+
+      if (fetchProfileData) {
+        await fetchProfileData();
+      } else {
+        const newCert = {
+          id: certificateId,
+          title,
+          issuer,
+          date,
+          credential_id: generatedCredId,
+          file_url: fileUrl || null,
+          verified: true
+        };
+        setCertificates((prev) => [...prev, newCert]);
+      }
+
+      triggerTask("add-certificate");
+      addActivity(`Certificate '${title}' synced with verified status`, "success");
+      triggerToast(`Certificate '${title}' successfully synced!`, "success");
+
+      // Reset Form
+      setTitle("");
+      setIssuer("");
+      setCredId("");
+      setFileUrl("");
+      setIsAddOpen(false);
+    } catch (err: any) {
+      console.error(err);
+      triggerToast(err.message || "Failed to link certificate.", "error");
+    }
   };
 
   const filtered = certificates.filter((c) =>
@@ -1078,6 +1407,35 @@ export function CertificatesView({
             </div>
           </div>
 
+          <div>
+            <label className="block font-label-caps text-[10px] font-bold uppercase mb-1">Attachment Proof (Image or PDF)</label>
+            <div className="flex gap-3 items-center">
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={handleUploadCertFile}
+                disabled={isUploading}
+                className="hidden"
+                id="cert-file-upload"
+              />
+              <label
+                htmlFor="cert-file-upload"
+                className={`px-4 py-2 border-[2px] border-on-surface bg-white text-on-surface text-xs font-bold rounded cursor-pointer hover:bg-slate-50 transition-colors inline-flex items-center gap-1.5 ${
+                  isUploading ? "opacity-50 pointer-events-none" : ""
+                }`}
+              >
+                <span className="material-symbols-outlined text-[16px]">upload_file</span>
+                {isUploading ? "Uploading..." : "Choose File"}
+              </label>
+              {fileUrl && (
+                <div className="flex items-center gap-1.5 font-mono text-[10px] text-secondary font-bold">
+                  <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                  Uploaded!
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="pt-4 border-t border-on-surface/10 flex justify-end gap-2">
             <button type="button" onClick={() => setIsAddOpen(false)} className="px-4 py-2 border border-on-surface bg-white text-xs font-bold rounded">
               Cancel
@@ -1134,6 +1492,21 @@ export function CertificatesView({
                 </span>
               </div>
             </div>
+
+            {selectedCert.file_url && (
+              <div className="p-3 border-[2px] border-on-surface bg-white rounded font-mono text-xs space-y-1">
+                <span className="text-[9px] text-on-surface-variant font-bold block uppercase">Attachment Proof</span>
+                <a
+                  href={selectedCert.file_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-black text-primary underline hover:text-primary/80 inline-flex items-center gap-1.5"
+                >
+                  <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+                  View Credential Document
+                </a>
+              </div>
+            )}
 
             <div className="flex justify-between items-center pt-4 border-t border-on-surface/10">
               <span className="font-mono text-[9px] text-primary truncate max-w-[200px]">
@@ -2159,25 +2532,7 @@ export function ShareCenterView({
                 </div>
               </div>
 
-              <div>
-                <label className="block font-label-caps text-[10px] text-on-surface-variant font-bold uppercase mb-1">
-                  Short URL
-                </label>
-                <div className="flex gap-2">
-                  <div className="flex-1 border-[2px] border-on-surface p-2.5 bg-slate-50 font-mono text-xs rounded truncate">
-                    km.to/{username}
-                  </div>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(`km.to/${username}`);
-                      triggerToast("Short link copied!", "success");
-                    }}
-                    className="px-4 py-2 bg-primary-container text-on-primary-container text-xs font-bold border-[2px] border-on-surface rounded cursor-pointer"
-                  >
-                    Copy
-                  </button>
-                </div>
-              </div>
+              {/* Only primary profile URL form is needed */}
             </div>
           </div>
 
@@ -2217,7 +2572,7 @@ export function ShareCenterView({
                 <span className="text-[8px] font-mono text-on-surface-variant block uppercase tracking-wider">Verified Builder Node</span>
               </div>
               <div className="flex justify-between items-end">
-                <span className="font-mono text-[10px] text-primary font-bold">km.to/{username}</span>
+                <span className="font-mono text-[10px] text-primary font-bold">{baseUrl}/{username}</span>
                 <div className="w-10 h-10 border border-on-surface bg-white p-0.5 rounded">
                   <svg viewBox="0 0 100 100" className="w-full h-full text-black">
                     <rect width="30" height="30" />

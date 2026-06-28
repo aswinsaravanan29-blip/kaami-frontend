@@ -17,7 +17,7 @@ interface ToastContainerProps {
 
 export function ToastContainer({ toasts, removeToast }: ToastContainerProps) {
   return (
-    <div className="fixed bottom-6 right-6 z-[100] flex flex-col gap-3 max-w-sm w-full pointer-events-none">
+    <div className="fixed bottom-6 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 sm:max-w-sm z-[100] flex flex-col gap-3 pointer-events-none">
       {toasts.map((toast) => {
         let bg = "bg-white";
         let icon = "info";

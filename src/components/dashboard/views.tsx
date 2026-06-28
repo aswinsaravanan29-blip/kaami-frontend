@@ -52,8 +52,9 @@ export function DashboardHomeView({
   downloadsCount
 }: DashboardHomeProps) {
   // Completion calculation
-  const totalTasks = 9;
-  const completedCount = Object.values(checkedTasks).filter(Boolean).length;
+  const taskKeys = ["add-photo", "connect-github", "connect-linkedin", "upload-resume", "add-project", "add-certificate", "add-experience", "publish-profile"];
+  const totalTasks = taskKeys.length;
+  const completedCount = taskKeys.filter((key) => checkedTasks[key]).length;
   const completionPercentage = Math.round((completedCount / totalTasks) * 100);
 
   const suggestedActions = [
@@ -134,7 +135,7 @@ export function DashboardHomeView({
         {/* Left column: checklist & suggestions */}
         <div className="lg:col-span-2 space-y-6">
           {/* PROFILE STRENGTH CHECKLIST */}
-          <div className="bg-[#F0FFF4] border-[3px] border-on-surface p-6 neubrutal-shadow-sm rounded-xl">
+          <div className={`border-[3px] border-on-surface p-6 neubrutal-shadow-sm rounded-xl ${completionPercentage === 100 ? "bg-gradient-to-br from-[#D4EDDA] via-[#C8F5C8] to-[#B8F0B8]" : "bg-[#F0FFF4]"}`}>
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-headline-md text-lg font-black uppercase text-on-surface">
                 Profile strength: {completionPercentage}%
@@ -152,28 +153,52 @@ export function DashboardHomeView({
               ></div>
             </div>
 
-            {/* Checklist items */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {[
-                { id: "add-photo", label: "Add profile photo" },
-                { id: "connect-github", label: "Connect GitHub" },
-                { id: "connect-linkedin", label: "Connect LinkedIn" },
-                { id: "upload-resume", label: "Upload resume" },
-                { id: "add-project", label: "Add first project" },
-                { id: "add-certificate", label: "Add certificate" },
-                { id: "add-experience", label: "Add experience" },
-                { id: "publish-profile", label: "Publish profile" },
-                { id: "share-profile", label: "Share profile" }
-              ].map((task) => (
-                <button
-                  key={task.id}
-                  onClick={() => handleTaskClick(task.id, task.label)}
-                  className="flex items-center gap-3 p-3 border-[2px] border-on-surface rounded-lg bg-white hover:bg-slate-50 cursor-pointer select-none transition-colors w-full text-left"
-                >
-                  <div className={`w-5 h-5 border-[2px] border-on-surface rounded flex items-center justify-center shrink-0 transition-colors ${checkedTasks[task.id] ? "bg-secondary text-white border-secondary" : "bg-white"}`}>
-                    {checkedTasks[task.id] && (
-                      <span className="material-symbols-outlined text-[14px] font-black">check</span>
-                    )}
+            {completionPercentage === 100 ? (
+              /* SUCCESS BANNER — shown when fully complete */
+              <div className="border-[3px] border-on-surface bg-white rounded-xl p-6 flex flex-col items-center text-center gap-4 neubrutal-shadow-sm">
+                <div className="text-5xl animate-bounce">🎉</div>
+                <div>
+                  <h4 className="font-display text-xl font-black uppercase text-on-surface tracking-tight">
+                    Identity Ledger Fully Secured & Synced
+                  </h4>
+                  <p className="text-on-surface-variant text-sm font-medium mt-2 leading-relaxed max-w-lg mx-auto">
+                    Your Kaami builder profile is completely verified, live, and registered on the cryptographic network node. Recruiters can now find and trust your credentials.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-3 justify-center mt-2">
+                  <a
+                    href={`http://localhost:3000/${window?.location ? undefined : ""}profile`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2 bg-on-surface text-white font-bold text-xs rounded-lg border-[2px] border-on-surface hover:bg-primary transition-colors flex items-center gap-2"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">open_in_new</span>
+                    Preview Live Profile
+                  </a>
+                </div>
+              </div>
+            ) : (
+              /* Checklist items */
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {[
+                  { id: "add-photo", label: "Add profile photo" },
+                  { id: "connect-github", label: "Connect GitHub" },
+                  { id: "connect-linkedin", label: "Connect LinkedIn" },
+                  { id: "upload-resume", label: "Upload resume" },
+                  { id: "add-project", label: "Add first project" },
+                  { id: "add-certificate", label: "Add certificate" },
+                  { id: "add-experience", label: "Add experience" },
+                  { id: "publish-profile", label: "Publish profile" }
+                ].map((task) => (
+                  <button
+                    key={task.id}
+                    onClick={() => handleTaskClick(task.id, task.label)}
+                    className="flex items-center gap-3 p-3 border-[2px] border-on-surface rounded-lg bg-white hover:bg-slate-50 cursor-pointer select-none transition-colors w-full text-left"
+                  >
+                    <div className={`w-5 h-5 border-[2px] border-on-surface rounded flex items-center justify-center shrink-0 transition-colors ${checkedTasks[task.id] ? "bg-secondary text-white border-secondary" : "bg-white"}`}>
+                      {checkedTasks[task.id] && (
+                        <span className="material-symbols-outlined text-[14px] font-black">check</span>
+                      )}
                   </div>
                   <span className={`font-body-md text-[13px] font-bold ${checkedTasks[task.id] ? "line-through text-on-surface-variant/40 font-medium" : "text-on-surface"}`}>
                     {task.label}
@@ -181,6 +206,7 @@ export function DashboardHomeView({
                 </button>
               ))}
             </div>
+            )}
           </div>
 
           {/* DYNAMIC SUGGESTED ACTION */}
@@ -1907,7 +1933,7 @@ export function VerificationView({
   triggerTask,
   checkedTasks
 }: VerificationProps) {
-  const [activeTab, setActiveTab] = useState<"identity" | "employment" | "skill" | "cert" | "inbox">("identity");
+  const [activeTab, setActiveTab] = useState<"identity" | "employment" | "skill" | "cert" | "inbox" | "messages">("identity");
 
   const handleInboxAction = (id: number, action: "Approved" | "Rejected") => {
     // Locate item
@@ -1943,7 +1969,8 @@ export function VerificationView({
     }
   };
 
-  const pendingCount = inboxItems.filter((i) => i.status === "Pending").length;
+  const pendingProofsCount = inboxItems.filter((i) => i.status === "Pending" && i.type !== "Contact Message").length;
+  const contactMessagesCount = inboxItems.filter((i) => i.type === "Contact Message").length;
 
   return (
     <div className="space-y-6">
@@ -1954,7 +1981,8 @@ export function VerificationView({
           { id: "employment", label: "Employment" },
           { id: "skill", label: "Skills Validation" },
           { id: "cert", label: "Certs Sync" },
-          { id: "inbox", label: `Proof Inbox (${pendingCount})` }
+          { id: "inbox", label: `Proof Inbox (${pendingProofsCount})` },
+          { id: "messages", label: `Messages (${contactMessagesCount})` }
         ].map((tab) => (
           <button
             key={tab.id}
@@ -2082,7 +2110,7 @@ export function VerificationView({
             <p className="text-xs text-on-surface-variant">Accept or discard verification requests and peer endorsement submissions.</p>
 
             <div className="space-y-3">
-              {inboxItems.map((item) => (
+              {inboxItems.filter((i) => i.type !== "Contact Message").map((item) => (
                 <div
                   key={item.id}
                   className="p-4 border-[2px] border-on-surface rounded-lg bg-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:bg-slate-50 transition-colors"
@@ -2124,9 +2152,76 @@ export function VerificationView({
                   </div>
                 </div>
               ))}
-              {inboxItems.length === 0 && (
+              {inboxItems.filter((i) => i.type !== "Contact Message").length === 0 && (
                 <div className="p-4 text-center text-on-surface-variant/50 font-bold text-xs">
                   Your inbox queue is empty.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === "messages" && (
+          <div className="space-y-4">
+            <h3 className="font-headline-md text-base font-black uppercase text-on-surface">Contact Messages</h3>
+            <p className="text-xs text-on-surface-variant">Read messages and recruitment inquiries sent via your public profile page.</p>
+
+            <div className="space-y-3">
+              {inboxItems.filter((i) => i.type === "Contact Message").map((msg) => (
+                <div
+                  key={msg.id}
+                  className="p-4 border-[2px] border-on-surface rounded-lg bg-white flex flex-col justify-between gap-4 hover:bg-slate-50 transition-colors"
+                >
+                  <div className="space-y-2 flex-1">
+                    <div className="flex justify-between items-start gap-4">
+                      <div>
+                        <h4 className="font-bold text-sm text-on-surface">{msg.requester}</h4>
+                        <span className="font-mono text-[9px] text-primary font-bold">{msg.details.split("\n")[0]}</span>
+                      </div>
+                      <span className="font-mono text-[9px] text-on-surface-variant/50">{msg.timestamp}</span>
+                    </div>
+                    <p className="text-xs text-on-surface-variant leading-relaxed bg-slate-50 p-2.5 border border-on-surface/10 rounded font-medium whitespace-pre-line">
+                      {msg.details.includes("Message: ") ? msg.details.split("Message: ").slice(1).join("Message: ") : msg.details}
+                    </p>
+                  </div>
+
+                  <div className="flex justify-end pt-1">
+                    <button
+                      onClick={async () => {
+                        const token = localStorage.getItem("token");
+                        if (!token) return;
+
+                        try {
+                          const res = await fetch(`${backendUrl}/api/profile/inbox/${msg.id}`, {
+                            method: "DELETE",
+                            headers: {
+                              "Authorization": `Bearer ${token}`
+                            }
+                          });
+
+                          if (res.ok) {
+                            setInboxItems((prev) => prev.filter((i) => i.id !== msg.id));
+                            addActivity(`Contact message from ${msg.requester} deleted`, "info");
+                            triggerToast("Message deleted from inbox ledger.", "success");
+                          } else {
+                            throw new Error("Delete failed");
+                          }
+                        } catch (err) {
+                          console.error(err);
+                          triggerToast("Failed to delete message.", "error");
+                        }
+                      }}
+                      className="px-3 py-1 bg-white hover:bg-error-container hover:text-on-error-container text-error border border-on-surface text-[10px] font-bold rounded cursor-pointer flex items-center gap-1"
+                    >
+                      <span className="material-symbols-outlined text-[12px] font-bold">delete</span>
+                      Delete Message
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {inboxItems.filter((i) => i.type === "Contact Message").length === 0 && (
+                <div className="p-4 text-center text-on-surface-variant/50 font-bold text-xs">
+                  No contact messages received yet.
                 </div>
               )}
             </div>
@@ -2789,6 +2884,279 @@ export function SettingsView({
               </div>
               <span className="text-secondary font-bold">Active Now</span>
             </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// --- SCHEDULER VIEW ---
+interface SchedulerViewProps {
+  inboxItems: any[];
+  availabilityRequestsEnabled: boolean;
+  setAvailabilityRequestsEnabled: (v: boolean) => void;
+  schedulingLink: string;
+  setSchedulingLink: (v: string) => void;
+  triggerToast: (msg: string, type: "success" | "error" | "info" | "sync") => void;
+  addActivity: (text: string, type: string) => Promise<void>;
+  onSaveSchedulerSettings: () => Promise<void>;
+  onBookingAction: (id: number, action: "Approved" | "Rejected", selectedSlot?: string, meetingLink?: string) => Promise<void>;
+}
+
+export function SchedulerView({
+  inboxItems,
+  availabilityRequestsEnabled,
+  setAvailabilityRequestsEnabled,
+  schedulingLink,
+  setSchedulingLink,
+  triggerToast,
+  addActivity,
+  onSaveSchedulerSettings,
+  onBookingAction
+}: SchedulerViewProps) {
+  const [saving, setSaving] = useState(false);
+  const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const [selectedSlots, setSelectedSlots] = useState<Record<number, string>>({});
+  const [meetingLinks, setMeetingLinks] = useState<Record<number, string>>({});
+
+  const bookingRequests = inboxItems.filter((item) => item.type === "Availability Request");
+
+  const handleSave = async () => {
+    setSaving(true);
+    await onSaveSchedulerSettings();
+    triggerToast("Scheduler settings saved.", "success");
+    setSaving(false);
+  };
+
+  const generateMeetingLink = () => {
+    const chars = "abcdefghijklmnopqrstuvwxyz";
+    const rand = (n: number) => Array.from({ length: n }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+    return `meet.google.com/${rand(3)}-${rand(4)}-${rand(3)}`;
+  };
+
+  const handleAction = async (id: number, action: "Approved" | "Rejected") => {
+    const slot = selectedSlots[id];
+    const link = meetingLinks[id] || generateMeetingLink();
+    if (action === "Approved" && !slot) {
+      triggerToast("Please select a slot to confirm before approving.", "error");
+      return;
+    }
+    setActionLoading(id);
+    await onBookingAction(id, action, slot, link);
+    setActionLoading(null);
+    triggerToast(action === "Approved" ? `Meeting approved for slot: ${slot}` : "Meeting request declined.", action === "Approved" ? "success" : "info");
+  };
+
+  const parseDetails = (details: any) => {
+    if (!details) return {};
+    if (typeof details === "object") return details;
+    try { return JSON.parse(details); } catch { return {}; }
+  };
+
+  const getStatusBadge = (status: string) => {
+    if (status === "Approved") return "bg-secondary-container text-on-secondary-container";
+    if (status === "Rejected") return "bg-error-container text-on-error-container";
+    return "bg-tertiary-fixed text-on-tertiary-fixed";
+  };
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      {/* Header */}
+      <div className="bg-[#F5F0FF] border-[3px] border-on-surface p-5 neubrutal-shadow-sm rounded-xl">
+        <h2 className="font-display text-xl font-black uppercase text-on-surface">Scheduler</h2>
+        <p className="text-xs text-on-surface-variant font-medium mt-1">
+          Manage your availability window and incoming slot booking requests from recruiters.
+        </p>
+      </div>
+
+      {/* Settings Card */}
+      <div className="bg-white border-[3px] border-on-surface p-5 neubrutal-shadow-sm rounded-xl space-y-5">
+        <h3 className="font-headline-md text-base font-black uppercase text-on-surface">Scheduling Settings</h3>
+
+        {/* Toggle */}
+        <div className="flex items-center justify-between gap-4 p-4 bg-surface border-[2px] border-on-surface rounded-lg">
+          <div>
+            <div className="font-bold text-sm text-on-surface">Direct Meeting Requests</div>
+            <div className="text-xs text-on-surface-variant mt-0.5">Allow visitors on your public profile to request a meeting slot directly.</div>
+          </div>
+          <button
+            onClick={() => setAvailabilityRequestsEnabled(!availabilityRequestsEnabled)}
+            className={`relative w-12 h-6 rounded-full border-[2px] border-on-surface transition-colors shrink-0 ${availabilityRequestsEnabled ? "bg-secondary" : "bg-white"}`}
+          >
+            <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-on-surface border border-on-surface transition-all ${availabilityRequestsEnabled ? "left-6" : "left-0.5"}`} />
+          </button>
+        </div>
+
+        {/* Scheduling Link */}
+        <div className="space-y-2">
+          <label className="font-label-caps text-[10px] font-black uppercase tracking-wider text-on-surface-variant block">
+            Custom Scheduling URL (optional)
+          </label>
+          <div className="flex gap-2">
+            <div className="flex-1 flex items-center gap-2 border-[2px] border-on-surface rounded-lg px-3 py-2 bg-white">
+              <span className="material-symbols-outlined text-[16px] text-on-surface-variant shrink-0">link</span>
+              <input
+                type="url"
+                value={schedulingLink}
+                onChange={(e) => setSchedulingLink(e.target.value)}
+                placeholder="https://calendly.com/your-link or cal.com/your-link"
+                className="flex-1 text-sm font-mono outline-none bg-transparent text-on-surface placeholder:text-on-surface-variant/40"
+              />
+            </div>
+          </div>
+          <p className="text-[10px] text-on-surface-variant/70 font-medium">
+            If set, the "Book a Slot" button on your public profile will redirect to this link instead of showing the direct request form.
+          </p>
+        </div>
+
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="px-4 py-2 bg-on-surface text-white font-bold text-xs rounded-lg border-[2px] border-on-surface hover:bg-primary transition-colors disabled:opacity-60 flex items-center gap-2"
+        >
+          <span className="material-symbols-outlined text-[16px]">{saving ? "sync" : "save"}</span>
+          {saving ? "Saving..." : "Save Settings"}
+        </button>
+      </div>
+
+      {/* Incoming Requests */}
+      <div className="bg-white border-[3px] border-on-surface p-5 neubrutal-shadow-sm rounded-xl space-y-4">
+        <div className="flex justify-between items-center">
+          <h3 className="font-headline-md text-base font-black uppercase text-on-surface">Incoming Booking Requests</h3>
+          <span className="font-mono text-xs font-bold px-2 py-0.5 border-[2px] border-on-surface bg-surface">
+            {bookingRequests.length} total
+          </span>
+        </div>
+
+        {bookingRequests.length === 0 ? (
+          <div className="py-10 text-center border-[2px] border-dashed border-on-surface/20 rounded-xl">
+            <span className="material-symbols-outlined text-4xl text-on-surface-variant/30 block mb-2">calendar_month</span>
+            <p className="text-on-surface-variant font-bold text-sm">No booking requests yet.</p>
+            <p className="text-[11px] text-on-surface-variant/60 mt-1">When recruiters submit slot requests from your public profile, they&apos;ll appear here.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {bookingRequests.map((item) => {
+              const details = parseDetails(item.details);
+              const status = details.status || item.status || "Pending";
+              const proposedSlots: string[] = details.proposedSlots || [];
+
+              return (
+                <div key={item.id} className="border-[2px] border-on-surface rounded-xl overflow-hidden">
+                  {/* Request header */}
+                  <div className="p-4 bg-surface flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-full bg-on-surface text-white flex items-center justify-center font-black text-sm shrink-0">
+                        {(item.requester || "?")[0].toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="font-bold text-sm text-on-surface">{item.requester}</div>
+                        <div className="text-[11px] text-on-surface-variant">{details.email}</div>
+                        <div className="text-[11px] font-medium text-on-surface mt-1">
+                          <span className="font-bold">Topic:</span> {details.topic}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`font-mono text-[10px] font-bold px-2 py-0.5 border border-on-surface rounded ${getStatusBadge(status)}`}>
+                        {status}
+                      </span>
+                      <span className="text-[10px] text-on-surface-variant/60">{item.timestamp}</span>
+                    </div>
+                  </div>
+
+                  {/* Proposed slots */}
+                  {proposedSlots.length > 0 && (
+                    <div className="px-4 pb-3 border-t border-on-surface/10 pt-3 bg-white">
+                      <div className="font-label-caps text-[10px] font-black uppercase tracking-wider text-on-surface-variant mb-2">
+                        Proposed Slots
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {proposedSlots.map((slot, i) => (
+                          <button
+                            key={i}
+                            disabled={status !== "Pending"}
+                            onClick={() => setSelectedSlots((p) => ({ ...p, [item.id]: slot }))}
+                            className={`px-3 py-1.5 text-[11px] font-bold border-[2px] rounded-lg transition-colors ${selectedSlots[item.id] === slot
+                              ? "bg-on-surface text-white border-on-surface"
+                              : "bg-white border-on-surface hover:bg-surface-container-low"
+                              } disabled:opacity-50 disabled:cursor-not-allowed`}
+                          >
+                            <span className="material-symbols-outlined text-[12px] align-middle mr-1">schedule</span>
+                            {slot}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Approved details */}
+                  {status === "Approved" && details.confirmedSlot && (
+                    <div className="px-4 pb-4 bg-white border-t border-on-surface/10 pt-3 space-y-1">
+                      <p className="text-[11px] font-bold text-secondary">
+                        ✓ Confirmed for: {details.confirmedSlot}
+                      </p>
+                      {details.meetingLink && (
+                        <a
+                          href={`https://${details.meetingLink}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[11px] font-mono text-primary underline"
+                        >
+                          {details.meetingLink}
+                        </a>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Actions — only for pending */}
+                  {status === "Pending" && (
+                    <div className="px-4 pb-4 bg-white border-t border-on-surface/10 pt-3 space-y-3">
+                      <div className="space-y-1.5">
+                        <label className="font-label-caps text-[10px] font-black uppercase tracking-wider text-on-surface-variant block">
+                          Meeting Link (auto-generated or paste your own)
+                        </label>
+                        <div className="flex items-center gap-2 border-[2px] border-on-surface rounded-lg px-3 py-2 bg-surface">
+                          <span className="material-symbols-outlined text-[14px] text-on-surface-variant shrink-0">videocam</span>
+                          <input
+                            type="text"
+                            value={meetingLinks[item.id] || ""}
+                            placeholder={generateMeetingLink()}
+                            onChange={(e) => setMeetingLinks((p) => ({ ...p, [item.id]: e.target.value }))}
+                            className="flex-1 text-xs font-mono outline-none bg-transparent text-on-surface placeholder:text-on-surface-variant/40"
+                          />
+                          <button
+                            onClick={() => setMeetingLinks((p) => ({ ...p, [item.id]: generateMeetingLink() }))}
+                            className="text-[10px] font-bold text-primary hover:underline shrink-0"
+                          >
+                            Generate
+                          </button>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          disabled={actionLoading === item.id}
+                          onClick={() => handleAction(item.id, "Approved")}
+                          className="flex-1 px-3 py-2 bg-secondary-container text-on-secondary-container font-bold text-xs rounded-lg border-[2px] border-on-surface hover:bg-secondary hover:text-white transition-colors disabled:opacity-60 flex items-center justify-center gap-1.5"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                          Accept & Send Details
+                        </button>
+                        <button
+                          disabled={actionLoading === item.id}
+                          onClick={() => handleAction(item.id, "Rejected")}
+                          className="px-3 py-2 bg-error-container text-on-error-container font-bold text-xs rounded-lg border-[2px] border-on-surface hover:bg-error hover:text-white transition-colors disabled:opacity-60 flex items-center gap-1.5"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">cancel</span>
+                          Decline
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

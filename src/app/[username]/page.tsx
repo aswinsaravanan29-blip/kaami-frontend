@@ -22,6 +22,15 @@ export default function PublicProfilePage({ params }: ProfilePageProps) {
   const [isSubmittingMessage, setIsSubmittingMessage] = useState(false);
   const [messageToast, setMessageToast] = useState<{ text: string; type: "success" | "error" } | null>(null);
 
+  // Booking modal states
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [bookName, setBookName] = useState("");
+  const [bookEmail, setBookEmail] = useState("");
+  const [bookTopic, setBookTopic] = useState("");
+  const [bookSlots, setBookSlots] = useState(["", "", ""]);
+  const [isSubmittingBooking, setIsSubmittingBooking] = useState(false);
+  const [bookingToast, setBookingToast] = useState<{ text: string; type: "success" | "error" } | null>(null);
+
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
 
   useEffect(() => {
@@ -42,6 +51,17 @@ export default function PublicProfilePage({ params }: ProfilePageProps) {
           throw new Error("Could not reach verification database.");
         }
         const resData = await res.json();
+
+        // Increment view or scan statistic on mount
+        if (typeof window !== "undefined") {
+          const searchParams = new URLSearchParams(window.location.search);
+          const isQr = searchParams.get("ref") === "qr";
+          fetch(`${backendUrl}/api/profile/public/stat/${username}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ type: isQr ? "scan" : "view" })
+          }).catch(err => console.error("Stats increment failed", err));
+        }
 
         // Fetch GitHub activity inside loading screen to prevent layout shifts!
         const ghUser = resData?.profile?.checkedTasks?.githubUsername;
@@ -273,6 +293,13 @@ export default function PublicProfilePage({ params }: ProfilePageProps) {
                 href={profile.checkedTasks.resumeUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => {
+                  fetch(`${backendUrl}/api/profile/public/stat/${username}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ type: "download" })
+                  }).catch(err => console.error("Resume download stat failed", err));
+                }}
                 className="font-mono text-xs font-bold px-3 py-1 bg-primary-container text-on-primary-container border-[2px] border-on-surface rounded hover:translate-x-[1px] hover:translate-y-[1px] transition-transform select-none uppercase inline-flex items-center gap-1.5"
               >
                 <span className="material-symbols-outlined text-[14px]">download</span>
@@ -702,6 +729,141 @@ export default function PublicProfilePage({ params }: ProfilePageProps) {
                 </div>
               </form>
             </div>
+          );
+        })()}
+
+        {/* BOOK A SLOT SECTION */}
+        {(() => {
+          const profile = data?.profile;
+          if (!profile?.availabilityRequestsEnabled) return null;
+
+          const handleBookingSubmit = async (e: React.FormEvent) => {
+            e.preventDefault();
+            const filledSlots = bookSlots.filter((s) => s.trim());
+            if (!bookName || !bookEmail || !bookTopic || filledSlots.length === 0) {
+              setBookingToast({ text: "Please fill all fields and at least one proposed slot.", type: "error" });
+              return;
+            }
+            setIsSubmittingBooking(true);
+            setBookingToast(null);
+            try {
+              const res = await fetch(`${backendUrl}/api/profile/public/book/${username}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ senderName: bookName, email: bookEmail, topic: bookTopic, proposedSlots: filledSlots })
+              });
+              if (res.ok) {
+                setBookingToast({ text: "Meeting request sent! They will contact you once confirmed.", type: "success" });
+                setBookName(""); setBookEmail(""); setBookTopic(""); setBookSlots(["", "", ""]);
+                setTimeout(() => { setShowBookingModal(false); setBookingToast(null); }, 3000);
+              } else {
+                setBookingToast({ text: "Failed to send booking request.", type: "error" });
+              }
+            } catch (err) {
+              console.error(err);
+              setBookingToast({ text: "Connection error. Please try again.", type: "error" });
+            } finally {
+              setIsSubmittingBooking(false);
+            }
+          };
+
+          const containerBg = data?.profile?.themeMode === 'dark' ? 'bg-surface-dim' : 'bg-[#F5F0FF]';
+          const borderClass = 'border-on-surface';
+
+          return (
+            <>
+              <div className={`${containerBg} border-[3px] ${borderClass} p-6 md:p-8 neubrutal-shadow rounded-xl`}>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="material-symbols-outlined text-[20px] text-primary">calendar_month</span>
+                      <h3 className="font-headline-md text-base font-black uppercase">Book a Meeting Slot</h3>
+                    </div>
+                    <p className="text-xs text-on-surface-variant leading-relaxed">
+                      Request a direct meeting slot with {profile.displayName}. They&apos;ll review your request and confirm a time.
+                    </p>
+                  </div>
+                  {profile.schedulingLink ? (
+                    <a
+                      href={profile.schedulingLink.startsWith('http') ? profile.schedulingLink : `https://${profile.schedulingLink}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="shrink-0 px-5 py-2.5 bg-primary-container text-on-primary-container font-black text-xs border-[2px] border-on-surface rounded neubrutal-shadow-sm hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition-all flex items-center gap-1.5"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">open_in_new</span>
+                      Book via Calendly
+                    </a>
+                  ) : (
+                    <button
+                      onClick={() => setShowBookingModal(true)}
+                      className="shrink-0 px-5 py-2.5 bg-primary-container text-on-primary-container font-black text-xs border-[2px] border-on-surface rounded neubrutal-shadow-sm hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none transition-all flex items-center gap-1.5"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">event</span>
+                      Request a Slot
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Booking Modal */}
+              {showBookingModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                  <div className="absolute inset-0 bg-[#1c1b1b]/70 backdrop-blur-sm" onClick={() => setShowBookingModal(false)} />
+                  <div className="relative w-full max-w-lg bg-[#FFFBEF] border-[3px] border-on-surface rounded-xl p-6 z-10 neubrutal-shadow space-y-4 animate-fade-in max-h-[90vh] overflow-y-auto">
+                    <div className="flex justify-between items-center">
+                      <h3 className="font-display text-lg font-black uppercase">Request a Meeting Slot</h3>
+                      <button onClick={() => setShowBookingModal(false)} className="w-8 h-8 border-[2px] border-on-surface rounded-full flex items-center justify-center">
+                        <span className="material-symbols-outlined text-[16px]">close</span>
+                      </button>
+                    </div>
+                    <p className="text-xs text-on-surface-variant">
+                      Propose up to 3 time slots and {profile.displayName} will confirm one.
+                    </p>
+
+                    <form onSubmit={handleBookingSubmit} className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block font-label-caps text-[10px] font-bold uppercase mb-1 text-on-surface-variant">Your Name</label>
+                          <input type="text" required value={bookName} onChange={(e) => setBookName(e.target.value)} placeholder="e.g. Alex Chen" className="w-full border-[2px] border-on-surface p-2 bg-white font-mono text-xs rounded focus:outline-none" />
+                        </div>
+                        <div>
+                          <label className="block font-label-caps text-[10px] font-bold uppercase mb-1 text-on-surface-variant">Email</label>
+                          <input type="email" required value={bookEmail} onChange={(e) => setBookEmail(e.target.value)} placeholder="alex@company.com" className="w-full border-[2px] border-on-surface p-2 bg-white font-mono text-xs rounded focus:outline-none" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block font-label-caps text-[10px] font-bold uppercase mb-1 text-on-surface-variant">Topic / Purpose</label>
+                        <input type="text" required value={bookTopic} onChange={(e) => setBookTopic(e.target.value)} placeholder="e.g. SWE Role Discussion at Acme" className="w-full border-[2px] border-on-surface p-2 bg-white font-mono text-xs rounded focus:outline-none" />
+                      </div>
+                      <div>
+                        <label className="block font-label-caps text-[10px] font-bold uppercase mb-1.5 text-on-surface-variant">Proposed Slots (up to 3)</label>
+                        <div className="space-y-2">
+                          {bookSlots.map((slot, i) => (
+                            <input key={i} type="text" value={slot} onChange={(e) => { const s = [...bookSlots]; s[i] = e.target.value; setBookSlots(s); }} placeholder={`Slot ${i + 1} — e.g. Mon Jun 30, 3:00 PM IST`} className="w-full border-[2px] border-on-surface p-2 bg-white font-mono text-xs rounded focus:outline-none" />
+                          ))}
+                        </div>
+                        <p className="text-[10px] text-on-surface-variant/60 mt-1">Enter in any format — e.g. &quot;Thursday, Jul 3rd, 2–3 PM IST&quot;</p>
+                      </div>
+
+                      {bookingToast && (
+                        <div className={`p-3 border-[2px] border-on-surface text-xs font-bold font-mono rounded ${bookingToast.type === "success" ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"}`}>
+                          {bookingToast.text}
+                        </div>
+                      )}
+
+                      <div className="flex gap-3 justify-end pt-2">
+                        <button type="button" onClick={() => setShowBookingModal(false)} className="px-4 py-2 border-[2px] border-on-surface font-bold text-xs rounded bg-white hover:bg-surface-container-low transition-colors">
+                          Cancel
+                        </button>
+                        <button type="submit" disabled={isSubmittingBooking} className="px-5 py-2 bg-primary-container text-on-primary-container font-black text-xs border-[2px] border-on-surface rounded neubrutal-shadow-sm hover:translate-x-[1px] hover:translate-y-[1px] transition-all disabled:opacity-60">
+                          {isSubmittingBooking ? "Sending..." : "Send Request"}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
+            </>
           );
         })()}
 

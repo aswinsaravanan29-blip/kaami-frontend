@@ -22,7 +22,8 @@ import {
   PublicProfileView,
   ShareCenterView,
   BillingView,
-  SettingsView
+  SettingsView,
+  SchedulerView
 } from "../../components/dashboard/views";
 
 export default function DashboardPage() {
@@ -40,6 +41,8 @@ export default function DashboardPage() {
   const [themeMode, setThemeMode] = useState("modern");
   const [bio, setBio] = useState("");
   const [availability, setAvailability] = useState("open-roles");
+  const [availabilityRequestsEnabled, setAvailabilityRequestsEnabled] = useState(true);
+  const [schedulingLink, setSchedulingLink] = useState("");
 
   // --- 3. DYNAMIC DATA LISTS ---
   const [projects, setProjects] = useState<any[]>([]);
@@ -49,9 +52,6 @@ export default function DashboardPage() {
   const [activities, setActivities] = useState<any[]>([]);
 
   // --- 4. ANALYTICS COUNTERS ---
-  const [viewsCount, setViewsCount] = useState(42);
-  const [scansCount, setScansCount] = useState(12);
-  const [downloadsCount, setDownloadsCount] = useState(4);
 
   // --- 5. LAYOUT & NAVIGATION ---
   const [activeView, setActiveView] = useState("dashboard");
@@ -84,9 +84,12 @@ export default function DashboardPage() {
     "add-project": false,
     "add-certificate": false,
     "add-experience": false,
-    "publish-profile": false,
-    "share-profile": false
+    "publish-profile": false
   });
+
+  const viewsCount = checkedTasks?.viewsCount || 0;
+  const scansCount = checkedTasks?.scansCount || 0;
+  const downloadsCount = checkedTasks?.downloadsCount || 0;
 
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
 
@@ -125,6 +128,8 @@ export default function DashboardPage() {
         setBio(data.profile.bio);
         setAvailability(data.profile.availability);
         setCheckedTasks(data.profile.checkedTasks);
+        setAvailabilityRequestsEnabled(data.profile.availabilityRequestsEnabled ?? true);
+        setSchedulingLink(data.profile.schedulingLink || "");
         setIsOnboarded(true);
       } else {
         setIsOnboarded(false);
@@ -169,8 +174,7 @@ export default function DashboardPage() {
         const next = {
           ...prev,
           "add-project": projects.length > 0,
-          "add-certificate": certificates.length > 0,
-          "share-profile": testimonials.length > 0
+          "add-certificate": certificates.length > 0
         };
         // Update task registry in backend if changed
         if (JSON.stringify(prev) !== JSON.stringify(next)) {
@@ -378,15 +382,38 @@ export default function DashboardPage() {
       setCheckedTasks(nextTasks);
       await saveProfileCheckedTasks(nextTasks);
 
-      // Add project
-      const gitProj = {
-        id: "github-sync-route",
-        title: "OAuth Secure Engine",
-        desc: "Synced automatically via GitHub. Verified commit footprint for secure authentication middleware.",
-        tech: ["TypeScript", "GitHub API", "Node.js"],
-        link: `github.com/${username}/secure-oauth`,
-        year: "2026"
+      // Fetch real project details from GitHub API
+      let gitProj = {
+        id: "github-sync-project",
+        title: "GitHub Repository",
+        desc: "Repository synced from GitHub",
+        tech: ["GitHub", "Git"],
+        link: "",
+        year: new Date().getFullYear().toString()
       };
+
+      const gitUser = checkedTasks.githubUsername || githubUsernameInput || username;
+      if (gitUser) {
+        try {
+          const ghRes = await fetch(`https://api.github.com/users/${gitUser}/repos?sort=updated&per_page=1`);
+          if (ghRes.ok) {
+            const repos = await ghRes.json();
+            if (repos && repos.length > 0) {
+              const repo = repos[0];
+              gitProj = {
+                id: `github-${repo.id || repo.name.toLowerCase()}`,
+                title: repo.name,
+                desc: repo.description || `Synced automatically via GitHub. Public repository for ${repo.name}.`,
+                tech: repo.language ? [repo.language, "Git"] : ["Git"],
+                link: repo.html_url ? repo.html_url.replace("https://", "") : `github.com/${gitUser}/${repo.name}`,
+                year: repo.pushed_at ? repo.pushed_at.split("-")[0] : new Date().getFullYear().toString()
+              };
+            }
+          }
+        } catch (err) {
+          console.error("Failed to fetch real repo from GitHub API", err);
+        }
+      }
 
       const res = await fetch(`${backendUrl}/api/profile/project`, {
         method: "POST",
@@ -707,20 +734,46 @@ export default function DashboardPage() {
     );
   }
 
-  const sidebarItems = [
-    { id: "dashboard", label: "Dashboard", icon: "dashboard" },
-    { id: "profile-builder", label: "Profile Builder", icon: "badge" },
-    { id: "projects", label: "Projects", icon: "folder" },
-    { id: "proofs", label: "Proofs", icon: "verified" },
-    { id: "certificates", label: "Certificates", icon: "workspace_premium" },
-    { id: "skills", label: "Skills", icon: "code" },
-    { id: "testimonials", label: "Testimonials", icon: "reviews" },
-    { id: "verification", label: "Verification", icon: "policy" },
-    { id: "analytics", label: "Analytics", icon: "analytics" },
-    { id: "public-profile", label: "Public Profile", icon: "preview" },
-    { id: "share-center", label: "Share Center", icon: "share" },
-    { id: "billing", label: "Billing", icon: "credit_card" },
-    { id: "settings", label: "Settings", icon: "settings" }
+  const sidebarCategories = [
+    {
+      title: "Core",
+      items: [
+        { id: "dashboard", label: "Dashboard", icon: "dashboard" }
+      ]
+    },
+    {
+      title: "Identity Builder",
+      items: [
+        { id: "profile-builder", label: "Profile Builder", icon: "badge" },
+        { id: "public-profile", label: "Public Profile", icon: "preview" },
+        { id: "share-center", label: "Share Center", icon: "share" },
+        { id: "scheduler", label: "Scheduler", icon: "calendar_month" }
+      ]
+    },
+    {
+      title: "Verifiable Proofs",
+      items: [
+        { id: "projects", label: "Projects", icon: "folder" },
+        { id: "proofs", label: "Proofs", icon: "verified" },
+        { id: "certificates", label: "Certificates", icon: "workspace_premium" },
+        { id: "skills", label: "Skills", icon: "code" }
+      ]
+    },
+    {
+      title: "Feedback & Trust",
+      items: [
+        { id: "testimonials", label: "Testimonials", icon: "reviews" },
+        { id: "verification", label: "Verification", icon: "policy" }
+      ]
+    },
+    {
+      title: "Administration",
+      items: [
+        { id: "analytics", label: "Analytics", icon: "analytics" },
+        { id: "billing", label: "Billing", icon: "credit_card" },
+        { id: "settings", label: "Settings", icon: "settings" }
+      ]
+    }
   ];
 
   return (
@@ -841,22 +894,34 @@ export default function DashboardPage() {
       {/* GRID BODY */}
       <div className="flex-1 flex overflow-hidden">
         <aside className={`hidden md:block bg-surface border-r-[3px] border-on-surface transition-all duration-300 h-full overflow-y-auto shrink-0 scrollbar-none ${isSidebarCollapsed ? "w-20 p-3" : "w-64 p-4"}`}>
-          <div className="space-y-1">
-            {sidebarItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setActiveView(item.id)}
-                className={`w-full flex items-center border-[2px] rounded-lg transition-all cursor-pointer ${isSidebarCollapsed ? "justify-center p-3" : "gap-3 p-3"
-                  } ${activeView === item.id
-                    ? "bg-on-surface text-white border-on-surface"
-                    : "border-transparent hover:bg-white hover:border-on-surface"
-                  }`}
-              >
-                <span className="material-symbols-outlined shrink-0 text-[20px]">{item.icon}</span>
+          <div className="space-y-4">
+            {sidebarCategories.map((cat, catIdx) => (
+              <div key={catIdx} className="space-y-1">
                 {!isSidebarCollapsed && (
-                  <span className="font-label-caps text-xs font-bold select-none tracking-tight">{item.label}</span>
+                  <div className="font-label-caps text-[9px] text-on-surface-variant/50 font-black uppercase tracking-wider px-3 mb-1 mt-2">
+                    {cat.title}
+                  </div>
                 )}
-              </button>
+                {cat.items.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveView(item.id)}
+                    className={`w-full flex items-center border-[2px] rounded-lg transition-all cursor-pointer ${isSidebarCollapsed ? "justify-center p-3" : "gap-3 p-3"
+                      } ${activeView === item.id
+                        ? "bg-on-surface text-white border-on-surface"
+                        : "border-transparent hover:bg-white hover:border-on-surface"
+                      }`}
+                  >
+                    <span className="material-symbols-outlined shrink-0 text-[20px]">{item.icon}</span>
+                    {!isSidebarCollapsed && (
+                      <span className="font-label-caps text-xs font-bold select-none tracking-tight">{item.label}</span>
+                    )}
+                  </button>
+                ))}
+                {isSidebarCollapsed && catIdx < sidebarCategories.length - 1 && (
+                  <div className="border-b border-on-surface/10 my-2 mx-2" />
+                )}
+              </div>
             ))}
           </div>
         </aside>
@@ -865,28 +930,35 @@ export default function DashboardPage() {
           <div className="fixed inset-0 z-50 flex">
             <div className="absolute inset-0 bg-[#1c1b1b]/60 backdrop-blur-xs" onClick={() => setIsMobileSidebarOpen(false)} />
             <aside className="relative w-64 max-w-[80vw] bg-surface border-r-[3px] border-on-surface p-4 flex flex-col h-full z-10 animate-slide-in">
-              <div className="flex justify-between items-center mb-6">
+              <div className="flex justify-between items-center mb-4">
                 <span className="font-display text-lg font-black uppercase text-on-surface">Navigation</span>
                 <button onClick={() => setIsMobileSidebarOpen(false)} className="w-8 h-8 border-[2px] border-on-surface rounded-full flex items-center justify-center">
                   <span className="material-symbols-outlined text-[16px] font-bold">close</span>
                 </button>
               </div>
-              <div className="space-y-1 overflow-y-auto flex-1">
-                {sidebarItems.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => {
-                      setActiveView(item.id);
-                      setIsMobileSidebarOpen(false);
-                    }}
-                    className={`w-full flex items-center gap-3 p-3 border-[2px] rounded-lg cursor-pointer ${activeView === item.id
-                      ? "bg-on-surface text-white border-on-surface"
-                      : "border-transparent hover:bg-white"
-                      }`}
-                  >
-                    <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
-                    <span className="font-label-caps text-xs font-bold">{item.label}</span>
-                  </button>
+              <div className="space-y-4 overflow-y-auto flex-1 scrollbar-none">
+                {sidebarCategories.map((cat, catIdx) => (
+                  <div key={catIdx} className="space-y-1">
+                    <div className="font-label-caps text-[9px] text-on-surface-variant/50 font-black uppercase tracking-wider px-3 mb-1">
+                      {cat.title}
+                    </div>
+                    {cat.items.map((item) => (
+                      <button
+                        key={item.id}
+                        onClick={() => {
+                          setActiveView(item.id);
+                          setIsMobileSidebarOpen(false);
+                        }}
+                        className={`w-full flex items-center gap-3 p-3 border-[2px] rounded-lg cursor-pointer ${activeView === item.id
+                          ? "bg-on-surface text-white border-on-surface"
+                          : "border-transparent hover:bg-white"
+                          }`}
+                      >
+                        <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
+                        <span className="font-label-caps text-xs font-bold select-none tracking-tight">{item.label}</span>
+                      </button>
+                    ))}
+                  </div>
                 ))}
               </div>
             </aside>
@@ -1063,8 +1135,36 @@ export default function DashboardPage() {
                   displayName={displayName}
                   triggerToast={triggerToast}
                   baseUrl={baseUrl}
-                  incrementScans={() => setScansCount((p) => p + 1)}
-                  incrementDownloads={() => setDownloadsCount((p) => p + 1)}
+                  incrementScans={async () => {
+                    try {
+                      await fetch(`${backendUrl}/api/profile/public/stat/${username}`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ type: "scan" })
+                      });
+                      setCheckedTasks((prev) => ({
+                        ...prev,
+                        scansCount: (prev.scansCount || 0) + 1
+                      }));
+                    } catch (e) {
+                      console.error(e);
+                    }
+                  }}
+                  incrementDownloads={async () => {
+                    try {
+                      await fetch(`${backendUrl}/api/profile/public/stat/${username}`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ type: "download" })
+                      });
+                      setCheckedTasks((prev) => ({
+                        ...prev,
+                        downloadsCount: (prev.downloadsCount || 0) + 1
+                      }));
+                    } catch (e) {
+                      console.error(e);
+                    }
+                  }}
                 />
               )}
               {activeView === "billing" && <BillingView triggerToast={triggerToast} />}
@@ -1076,6 +1176,36 @@ export default function DashboardPage() {
                   setUsername={setUsername}
                   triggerToast={triggerToast}
                   addActivity={logActivity}
+                />
+              )}
+              {activeView === "scheduler" && (
+                <SchedulerView
+                  inboxItems={inboxItems}
+                  availabilityRequestsEnabled={availabilityRequestsEnabled}
+                  setAvailabilityRequestsEnabled={setAvailabilityRequestsEnabled}
+                  schedulingLink={schedulingLink}
+                  setSchedulingLink={setSchedulingLink}
+                  triggerToast={triggerToast}
+                  addActivity={logActivity}
+                  onSaveSchedulerSettings={async () => {
+                    const token = localStorage.getItem("token");
+                    if (!token || !username || !displayName || !profession) return;
+                    await fetch(`${backendUrl}/api/profile`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+                      body: JSON.stringify({ username, displayName, profession, themeMode, bio, availability, checkedTasks, availabilityRequestsEnabled, schedulingLink })
+                    });
+                  }}
+                  onBookingAction={async (id, action, selectedSlot, meetingLink) => {
+                    const token = localStorage.getItem("token");
+                    if (!token) return;
+                    await fetch(`${backendUrl}/api/profile/inbox/book/action`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+                      body: JSON.stringify({ id, action, selectedSlot, meetingLink })
+                    });
+                    await fetchProfileData();
+                  }}
                 />
               )}
             </>

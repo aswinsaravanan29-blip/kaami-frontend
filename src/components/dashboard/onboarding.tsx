@@ -51,6 +51,9 @@ export default function Onboarding({ onComplete, onSkip, baseUrl }: OnboardingPr
         if (res.ok) {
           const data = await res.json();
           setIsAvailable(data.available);
+          if (!data.available && data.suggestion) {
+            setUsername(data.suggestion);
+          }
         } else {
           setIsAvailable(false);
         }

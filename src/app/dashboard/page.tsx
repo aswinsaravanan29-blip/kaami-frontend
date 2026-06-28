@@ -65,6 +65,7 @@ export default function DashboardPage() {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isTrustModalOpen, setIsTrustModalOpen] = useState(false);
   const [syncStatus, setSyncStatus] = useState<"synced" | "syncing" | "error">("synced");
+  const [authTransition, setAuthTransition] = useState<string | null>(null);
 
   const [checkedTasks, setCheckedTasks] = useState<Record<string, boolean>>({
     "add-photo": false,
@@ -347,11 +348,11 @@ export default function DashboardPage() {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    triggerToast("Logging out...", "info");
+    setAuthTransition("Terminating cryptographic ledger session...");
     setTimeout(() => {
       router.push("/");
       router.refresh();
-    }, 800);
+    }, 950);
   };
 
   const handleSyncNow = async () => {
@@ -952,6 +953,19 @@ export default function DashboardPage() {
       />
 
       <ToastContainer toasts={toasts} removeToast={removeToast} />
+
+      {/* Session Transition Overlay */}
+      {authTransition && (
+        <div className="fixed inset-0 bg-[#FFF9E6] border-[6px] border-on-surface z-[100] flex flex-col items-center justify-center animate-fade-in select-none">
+          <div className="bg-white border-[3px] border-on-surface p-8 neubrutal-shadow rounded-xl flex flex-col items-center gap-6 max-w-xs text-center">
+            <span className="material-symbols-outlined text-[64px] animate-spin text-primary font-bold">sync</span>
+            <div>
+              <h3 className="font-display text-xl font-black uppercase text-on-surface">Kaami OS</h3>
+              <p className="font-mono text-xs text-on-surface-variant mt-2 font-bold">{authTransition}</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

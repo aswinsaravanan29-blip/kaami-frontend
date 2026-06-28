@@ -93,9 +93,9 @@ export default function Onboarding({ onComplete, onSkip, baseUrl }: OnboardingPr
   ];
 
   return (
-    <div className="w-full max-w-4xl bg-white border-[3px] border-on-surface neubrutal-shadow rounded-xl overflow-hidden flex flex-col md:flex-row">
+    <div className="w-full max-w-4xl bg-white border-[3px] border-on-surface neubrutal-shadow rounded-xl overflow-hidden flex flex-col md:flex-row animate-scale-up">
       {/* Sidebar with step indicator */}
-      <div className="md:w-1/3 bg-[#FFF9E6] border-b-[3px] md:border-b-0 md:border-r-[3px] border-on-surface p-8 flex flex-col justify-between">
+      <div className="hidden md:flex md:w-1/3 bg-[#FFF9E6] border-r-[3px] border-on-surface p-8 flex-col justify-between">
         <div>
           <span className="font-display text-headline-md font-black italic tracking-tighter text-on-surface uppercase block mb-6">
             Kaami Setup
@@ -148,20 +148,45 @@ export default function Onboarding({ onComplete, onSkip, baseUrl }: OnboardingPr
       </div>
 
       {/* Main Form content */}
-      <div className="flex-1 p-8 flex flex-col justify-between bg-surface min-h-[500px]">
+      <div className="flex-1 p-6 sm:p-8 flex flex-col justify-between bg-surface min-h-[480px]">
         {/* PROGRESS INDICATOR TOP */}
-        <div className="flex justify-between items-center mb-6">
-          <span className="font-label-caps text-[10px] text-on-surface-variant font-bold bg-white border-[2px] border-on-surface px-2.5 py-0.5 rounded-full">
-            Step {step} of 5
-          </span>
-          {step < 5 && (
-            <button
-              onClick={onSkip}
-              className="font-label-caps text-[11px] text-on-surface-variant/80 hover:text-primary font-bold transition-colors cursor-pointer"
-            >
-              Skip setup →
-            </button>
-          )}
+        <div className="flex flex-col gap-3 mb-6">
+          <div className="flex justify-between items-center">
+            <span className="font-label-caps text-[10px] text-on-surface-variant font-bold bg-white border-[2px] border-on-surface px-2.5 py-0.5 rounded-full">
+              Step {step} of 5
+            </span>
+            {step < 5 && (
+              <button
+                onClick={onSkip}
+                className="font-label-caps text-[11px] text-on-surface-variant/80 hover:text-primary font-bold transition-colors cursor-pointer"
+              >
+                Skip setup →
+              </button>
+            )}
+          </div>
+          
+          {/* Mobile Only: Progress Bar & Current Step Title */}
+          <div className="block md:hidden">
+            <div className="flex gap-1 h-2 bg-slate-100 border-[2px] border-on-surface rounded-full overflow-hidden">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div
+                  key={i}
+                  className={`flex-1 h-full transition-all duration-300 ${
+                    step >= i ? "bg-primary" : "bg-transparent"
+                  }`}
+                />
+              ))}
+            </div>
+            <div className="font-mono text-[9px] text-on-surface-variant/70 mt-1 uppercase font-bold text-right">
+              {[
+                "Welcome to Kaami",
+                "Choose Profession",
+                "Reserve Identity",
+                "Choose Theme",
+                "Review Setup"
+              ][step - 1]}
+            </div>
+          </div>
         </div>
 
         {/* STEP CONTENT SWITCHER */}

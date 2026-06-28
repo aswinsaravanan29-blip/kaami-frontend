@@ -12,6 +12,7 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [authTransition, setAuthTransition] = useState<string | null>(null);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -49,18 +50,20 @@ export default function RegisterPage() {
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
 
-      // Redirect to dashboard
-      router.push("/dashboard");
-      router.refresh();
+      // Redirect to dashboard with transition delay
+      setAuthTransition("Generating cryptographic ledger node signature...");
+      setTimeout(() => {
+        router.push("/dashboard");
+        router.refresh();
+      }, 950);
     } catch (err: any) {
       setError(err.message || "Something went wrong. Please try again.");
-    } finally {
       setLoading(false);
     }
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-[#FFF9E6] px-container-margin py-12">
+    <main className="min-h-screen flex items-center justify-center bg-[#FFF9E6] px-container-margin py-12 relative">
       <div className="w-full max-w-md bg-white border-[3px] border-on-surface p-8 neubrutal-shadow rounded-xl">
         <div className="text-center mb-8">
           <Link
@@ -156,7 +159,7 @@ export default function RegisterPage() {
 
           <NeubrutalButton
             type="submit"
-            className="w-full py-4 bg-primary-container text-on-primary-container font-headline-md text-headline-md text-center uppercase tracking-wider block"
+            className="w-full py-4 bg-primary-container text-on-primary-container font-button-text text-button-text uppercase tracking-widest text-center"
             shadowSize="sm"
             disabled={loading}
           >
@@ -176,6 +179,19 @@ export default function RegisterPage() {
           </p>
         </div>
       </div>
+
+      {/* Transition Overlay */}
+      {authTransition && (
+        <div className="fixed inset-0 bg-[#FFF9E6] border-[6px] border-on-surface z-[100] flex flex-col items-center justify-center animate-fade-in select-none">
+          <div className="bg-white border-[3px] border-on-surface p-8 neubrutal-shadow rounded-xl flex flex-col items-center gap-6 max-w-xs text-center">
+            <span className="material-symbols-outlined text-[64px] animate-spin text-primary font-bold">sync</span>
+            <div>
+              <h3 className="font-display text-xl font-black uppercase text-on-surface">Kaami OS</h3>
+              <p className="font-mono text-xs text-on-surface-variant mt-2 font-bold">{authTransition}</p>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

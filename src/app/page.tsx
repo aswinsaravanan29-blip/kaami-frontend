@@ -219,7 +219,7 @@ export default function Home() {
             </div>
             )}
             {/* Featured Bento Demo Card */}
-            <div className="bg-surface-container-lowest border-[3px] border-on-surface p-8 neubrutal-shadow rounded-xl">
+            <div className="bg-surface-container-lowest border-[3px] border-on-surface p-4 sm:p-8 neubrutal-shadow rounded-xl">
               <div className="flex items-center justify-between mb-8">
                 <div className="flex gap-2">
                   <div className="w-3 h-3 rounded-full bg-error"></div>
@@ -231,7 +231,7 @@ export default function Home() {
                 </span>
               </div>
               <div className="space-y-6">
-                <div className="p-6 bg-secondary-container border-[3px] border-on-surface neubrutal-shadow-sm rounded-lg flex items-center justify-between">
+                <div className="p-4 sm:p-6 bg-secondary-container border-[3px] border-on-surface neubrutal-shadow-sm rounded-lg flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-full border-[2px] border-on-surface bg-surface overflow-hidden relative">
                       <Image

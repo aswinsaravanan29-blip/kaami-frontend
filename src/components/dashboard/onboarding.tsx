@@ -12,11 +12,29 @@ interface OnboardingProps {
 export default function Onboarding({ onComplete, onSkip, baseUrl }: OnboardingProps) {
   const [step, setStep] = useState(1);
   const [profession, setProfession] = useState("developer");
-  const [displayName, setDisplayName] = useState("Alex Rivers");
-  const [username, setUsername] = useState("alex-rivers");
+  const [displayName, setDisplayName] = useState("");
+  const [username, setUsername] = useState("");
   const [isChecking, setIsChecking] = useState(false);
   const [isAvailable, setIsAvailable] = useState(true);
   const [theme, setTheme] = useState("modern");
+
+  // Read registered user info on mount to pre-populate name and username slug
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("user");
+      if (stored) {
+        try {
+          const u = JSON.parse(stored);
+          if (u.name) {
+            setDisplayName(u.name);
+            setUsername(u.name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-_]/g, ""));
+          }
+        } catch (e) {
+          console.error("Failed to parse user session in onboarding", e);
+        }
+      }
+    }
+  }, []);
 
   // Check username availability mock
   useEffect(() => {
@@ -229,6 +247,7 @@ export default function Onboarding({ onComplete, onSkip, baseUrl }: OnboardingPr
                       type="text"
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
+                      placeholder="e.g. Alex Rivers"
                       className="w-full border-[2px] border-on-surface p-2.5 bg-white font-body-md rounded-md focus:outline-none"
                     />
                   </div>
@@ -242,6 +261,7 @@ export default function Onboarding({ onComplete, onSkip, baseUrl }: OnboardingPr
                         type="text"
                         value={username}
                         onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, ""))}
+                        placeholder="e.g. alex-rivers"
                         className={`w-full border-[2px] border-on-surface p-2.5 pr-20 bg-white font-mono text-[14px] rounded-md focus:outline-none ${
                           !isAvailable && username.length > 0 ? "border-error bg-error-container/20" : ""
                         }`}
@@ -276,22 +296,16 @@ export default function Onboarding({ onComplete, onSkip, baseUrl }: OnboardingPr
                   <span className="font-label-caps text-[9px] text-on-surface-variant uppercase font-black mb-2 text-center">
                     Profile QR
                   </span>
-                  <div className="w-24 h-24 border-[2px] border-on-surface bg-slate-100 flex items-center justify-center p-2">
-                    {/* Mock QR SVG */}
-                    <svg viewBox="0 0 100 100" className="w-full h-full text-on-surface">
-                      <rect width="25" height="25" className="fill-current" />
-                      <rect x="75" width="25" height="25" className="fill-current" />
-                      <rect y="75" width="25" height="25" className="fill-current" />
-                      {/* Center block */}
-                      <rect x="35" y="35" width="30" height="30" className="fill-current" />
-                      {/* Random noise boxes */}
-                      <rect x="10" y="35" width="10" height="10" className="fill-current" />
-                      <rect x="50" y="10" width="10" height="15" className="fill-current" />
-                      <rect x="80" y="45" width="15" height="10" className="fill-current" />
-                      <rect x="15" y="60" width="10" height="10" className="fill-current" />
-                      <rect x="50" y="80" width="20" height="10" className="fill-current" />
-                      <rect x="75" y="75" width="10" height="10" className="fill-current" />
-                    </svg>
+                  <div className="w-24 h-24 border-[2px] border-on-surface bg-white flex items-center justify-center p-1 overflow-hidden">
+                    {username ? (
+                      <img
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://${baseUrl}/${username}`}
+                        alt="Profile QR Code"
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <span className="text-[10px] text-on-surface-variant/40 text-center font-bold">Waiting for username</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -385,10 +399,10 @@ export default function Onboarding({ onComplete, onSkip, baseUrl }: OnboardingPr
               <div className="p-4 bg-white border-[3px] border-on-surface neubrutal-shadow-sm rounded-lg flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 bg-secondary-container border-[2px] border-on-surface rounded-full flex items-center justify-center font-bold text-headline-md uppercase text-on-secondary-container">
-                    {displayName.charAt(0)}
+                    {displayName ? displayName.charAt(0) : "K"}
                   </div>
                   <div>
-                    <div className="font-headline-md text-[18px] font-black">{displayName}</div>
+                    <div className="font-headline-md text-[18px] font-black">{displayName || "Your Profile"}</div>
                     <div className="font-mono text-[11px] text-primary">{baseUrl}/{username}</div>
                   </div>
                 </div>
@@ -428,12 +442,15 @@ export default function Onboarding({ onComplete, onSkip, baseUrl }: OnboardingPr
           <div className="flex items-center gap-3">
             {step === 5 ? (
               <>
-                <button
-                  onClick={onSkip} // Just open public profile preview or dashboard
-                  className="px-4 py-2 border-[2px] border-on-surface bg-white font-bold rounded-lg hover:bg-slate-50 cursor-pointer"
+                <a
+                  href={`/${username}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 border-[2px] border-on-surface bg-white text-on-surface font-bold rounded-lg hover:bg-slate-50 cursor-pointer flex items-center gap-1.5 transition-all text-xs"
                 >
-                  Download QR
-                </button>
+                  <span className="material-symbols-outlined text-[16px]">open_in_new</span>
+                  View Profile
+                </a>
                 <NeubrutalButton
                   onClick={handleNext}
                   className="px-6 py-3 bg-primary-container text-on-primary-container font-headline-md text-headline-md"

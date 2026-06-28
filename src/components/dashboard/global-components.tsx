@@ -140,10 +140,12 @@ export function NeubrutalDrawer({ isOpen, onClose, title, children }: DrawerProp
       }`}
     >
       {/* Backdrop Area */}
-      <div className="flex-1 pointer-events-auto" onClick={onClose} />
+      <div className={`flex-1 ${isOpen ? "pointer-events-auto" : "pointer-events-none"}`} onClick={onClose} />
       {/* Slide-out Panel */}
       <div
-        className={`w-full max-w-md bg-surface border-l-[3px] border-on-surface p-6 neubrutal-shadow flex flex-col pointer-events-auto transition-transform duration-300 transform ${
+        className={`w-full max-w-md bg-surface border-l-[3px] border-on-surface p-6 neubrutal-shadow flex flex-col ${
+          isOpen ? "pointer-events-auto" : "pointer-events-none"
+        } transition-transform duration-300 transform ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
